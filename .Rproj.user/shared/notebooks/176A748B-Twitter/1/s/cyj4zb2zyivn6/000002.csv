@@ -1,0 +1,17 @@
+"0","```r
+library(rtweet)
+library(ggplot2)
+
+origop <- options(\"httr_oauth_cache\")
+options(httr_oauth_cache = TRUE)
+
+api_key <- \"5PgtS7ljq5ZbBoXnemU5qHe62\"
+api_secret <- \"M44LeduQ4zoyDxQIkAFjeIJrpDhWnb5xASDvhahTlrAvOhN7fx\"
+access_token <- \"743029724750942208-JLEp26XrjwvQ1CPJUXwvdUMLka82cgx\"
+access_secret <- \"XRMeMBaOgQy2BC1Bd9iJARfMIyK40VKyII1ZRcf9nS0qd\"
+  app = \"KyleResearchApp\",
+  consumer_key = api_key,
+  access_token = access_token,
+  access_secret = access_secret
+)
+```"
