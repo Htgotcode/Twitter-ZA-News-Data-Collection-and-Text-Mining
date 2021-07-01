@@ -1,0 +1,28 @@
+{
+    "id": "15A88F89",
+    "path": "~/GitHub/Twitter-ZA-News-Data-Collection-and-Text-Mining/kyle.Rmd",
+    "project_path": "kyle.Rmd",
+    "type": "r_markdown",
+    "hash": "0",
+    "contents": "",
+    "dirty": true,
+    "created": 1625150644816.0,
+    "source_on_save": false,
+    "relative_order": 1,
+    "properties": {
+        "tempName": "Untitled1",
+        "chunk_output_type": "inline",
+        "source_window_id": "",
+        "Source": "Source",
+        "cursorPosition": "43,0",
+        "scrollLine": "27"
+    },
+    "folds": "",
+    "lastKnownWriteTime": 1625134520,
+    "encoding": "UTF-8",
+    "collab_server": "",
+    "source_window": "",
+    "last_content_update": 1625157491815,
+    "read_only": false,
+    "read_only_alternatives": []
+}

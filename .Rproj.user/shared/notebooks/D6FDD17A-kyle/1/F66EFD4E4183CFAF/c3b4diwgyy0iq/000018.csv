@@ -1,0 +1,5 @@
+"0","write.csv(x = media_tweets_df, file = ""media_agency_tweets"") 
+"
+"2","Error in write.table(x = media_tweets_df, file = ""media_agency_tweets"",  : 
+  unimplemented type 'list' in 'EncodeElement'
+"

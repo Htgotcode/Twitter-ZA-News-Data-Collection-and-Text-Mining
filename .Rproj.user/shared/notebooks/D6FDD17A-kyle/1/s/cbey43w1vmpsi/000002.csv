@@ -1,0 +1,8 @@
+"0","```r
+tidy_news24 %>% 
+  inner_join(nrc_joy) %>%
+  count(word, sort = TRUE)
+
+```"
+"1","Joining, by = \"word\"
+"

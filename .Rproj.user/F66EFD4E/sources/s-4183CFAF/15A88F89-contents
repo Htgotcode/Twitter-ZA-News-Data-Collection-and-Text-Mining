@@ -1,0 +1,90 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+```{r}
+library(rtweet)
+library(ggplot2)
+library(tidyr)
+library(dplyr)
+library(tidytext)
+library(stringr)
+library(scales)
+
+origop <- options("httr_oauth_cache")
+options(httr_oauth_cache = TRUE)
+
+api_key <- "5PgtS7ljq5ZbBoXnemU5qHe62"
+api_secret <- "M44LeduQ4zoyDxQIkAFjeIJrpDhWnb5xASDvhahTlrAvOhN7fx"
+access_token <- "743029724750942208-JLEp26XrjwvQ1CPJUXwvdUMLka82cgx"
+access_secret <- "XRMeMBaOgQy2BC1Bd9iJARfMIyK40VKyII1ZRcf9nS0qd"
+token <- create_token(
+  app = "KyleResearchApp",
+  consumer_key = api_key,
+  consumer_secret = api_secret,
+  access_token = access_token,
+  access_secret = access_secret
+)
+```
+
+```{r}
+# media_tweets_df <- get_timeline(user = "News24", n = 3200)
+# 
+# media_tweets_df <- media_tweets_df %>% 
+#   rbind(get_timeline(user = "eNCA", n = 3200)) %>% 
+#   rbind(get_timeline(user = "SABCNews", n = 3200)) %>% 
+#   rbind(get_timeline(user = "ewnupdates", n = 3200)) %>% 
+#   rbind(get_timeline(user = "TimesLive", n = 3200))
+
+#media_tweets_df <- apply(media_tweets_df, 2, as.character)
+#write.csv(x = media_tweets_df, file = "media_agency_tweets") 
+
+media_tweets_df <- read.csv("data_in/media_agency_tweets")
+```
+
+```{r fig.height=15}
+tidy_news24 <- tweets_news24 %>% 
+  select(screen_name, status_id, text) %>% 
+  unnest_tokens(word, text) %>%
+  anti_join(stop_words)
+
+tidy_eNCA <- tweets_eNCA %>% 
+  select(screen_name, status_id, text) %>% 
+  unnest_tokens(word, text) %>%
+  anti_join(stop_words)
+
+
+frequency <- bind_rows(mutate(tidy_news24, screen_name = "News24"),
+                       mutate(tidy_eNCA, screen_name = "eNCA")) %>% 
+  mutate(word = str_extract(word, "[a-z']+")) %>%
+  count(screen_name, word) %>%
+  group_by(screen_name) %>%
+  mutate(proportion = n / sum(n)) %>% 
+  select(-n) %>% 
+  pivot_wider(names_from = screen_name, values_from = proportion) %>%
+  pivot_longer(`News24`:`eNCA`,
+               names_to = "screen name", values_to = "proportion")
+
+ggplot(frequency, aes(x = proportion, y = word, 
+                      color = proportion)) +
+  geom_abline(color = "gray40", lty = 2) +
+  geom_jitter(alpha = 0.1, size = 2.5, width = 0.3, height = 0.3) +
+  geom_text(aes(label = word), check_overlap = TRUE, vjust = 1.5) +
+  scale_color_gradient(limits = c(0, 0.001), 
+                       low = "darkslategray4", high = "gray75") +
+  facet_wrap(~`screen name`, ncol = 2) +
+  theme(legend.position="none") +
+  labs(y = "Proportion", x = NULL)
+```
+
+```{r}
+nrc_joy <- get_sentiments("nrc") %>% 
+  filter(sentiment == "negative")
+
+tidy_news24 %>% 
+  inner_join(nrc_joy) %>%
+  count(word, sort = TRUE)
+```
+
+
