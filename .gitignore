@@ -6,4 +6,4 @@
 *.error
 *.csv
 *.json
-*.json
+.Rproj.user/
