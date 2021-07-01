@@ -3,3 +3,7 @@
 *.rdf
 *.pper
 *.Rdata
+*.error
+*.csv
+*.json
+*.json
