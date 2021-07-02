@@ -13,6 +13,7 @@ library(stringr)
 library(scales)
 library(readr)
 library(lubridate)
+library(vader)
 
 origop <- options("httr_oauth_cache")
 options(httr_oauth_cache = TRUE)
@@ -46,10 +47,6 @@ media_agency_df <- read_csv("data_in/media_agency_tweets.csv")
 
 # Comparing Tweet Archives
 
-```{r}
-media_agency_df <- read_csv("data_in/media_agency_tweets") %>% 
-   mutate(created_at = ymd_hms(as.POSIXct(created_at, origin = "1970-01-01")))
-```
 
 ```{r}
 ggplot(media_agency_df, aes(x = created_at, fill = screen_name)) +
@@ -87,3 +84,9 @@ frequency <- frequency %>%
 
 #yearly 
 ```
+```{r}
+vader_df <- vader_df(tidy_covid_media_df$word)
+vader_df <- vader_df %>% rename("word" = text)
+tidy_covid_media_df <- tidy_covid_media_df %>% left_join(vader_df)
+```
+
