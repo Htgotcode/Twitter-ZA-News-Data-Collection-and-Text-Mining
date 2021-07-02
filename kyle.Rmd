@@ -30,6 +30,18 @@ token <- create_token(
 )
 ```
 
+```{r}
+#Get tweets
+media_agency_df <- get_timeline("News24", n = 3200)
+media_agency_df <- media_agency_df %>% 
+  mutate(rbind(rtweet::get_timeline("eNCA", n = 3200))) %>% 
+  mutate(rbind(rtweet::get_timeline("ewnupdates", n = 3200))) %>% 
+  mutate(rbind(rtweet::get_timeline("TimesLive", n = 3200))) %>% 
+  mutate(rbind(rtweet::get_timeline("SABCNews", n = 3200)))
+
+write_as_csv(media_agency_df, "data_in/media_agency_tweets")
+media_agency_df <- read_csv("data_in/media_agency_tweets.csv")
+```
 
 
 # Comparing Tweet Archives
@@ -44,17 +56,20 @@ ggplot(media_agency_df, aes(x = created_at, fill = screen_name)) +
   geom_histogram(position = "identity", bins = 20, show.legend = FALSE) +
   facet_wrap(~screen_name, ncol = 1)
 ```
+
 ```{r}
 #tidy df
 remove_reg <- "&amp;|&lt;|&gt;"
-tidy_media_agency_df <- media_agency_df %>% 
+tidy_covid_media_df <- media_agency_df %>% 
   mutate(text = gsub(" ?(f|ht)tp(s?)://(.*)[.][a-z]+", "", text)) %>% 
   filter(!str_detect(text, "^RT")) %>%
   mutate(text = str_remove_all(text, remove_reg)) %>%
   unnest_tokens(word, text, token = "tweets") %>%
   filter(!word %in% stop_words$word,
          !word %in% str_remove_all(stop_words$word, "'"),
-         str_detect(word, "[a-z]"))
+         str_detect(word, "[a-z]"),
+         !word %in% "cov",
+         !word %in% "coronavirus")
 
 #calculate a frequency for each person and word
 frequency <- tidy_media_agency_df %>% 
@@ -64,5 +79,11 @@ frequency <- tidy_media_agency_df %>%
               group_by(screen_name) %>% 
               summarise(total = n())) %>%
   mutate(freq = n/total)
-```
 
+#plot those frequencies on the x- and y-axes 
+frequency <- frequency %>% 
+  select(screen_name, word, freq) %>% 
+  pivot_wider(names_from = screen_name, values_from = freq)
+
+#yearly 
+```
