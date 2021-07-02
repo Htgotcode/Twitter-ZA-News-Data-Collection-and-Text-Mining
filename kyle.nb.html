@@ -217,80 +217,46 @@ pre code {
 <!-- rnb-text-begin -->
 <!-- rnb-text-end -->
 <!-- rnb-chunk-begin -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxubGlicmFyeShydHdlZXQpXG5saWJyYXJ5KGdncGxvdDIpXG5saWJyYXJ5KHRpZHlyKVxubGlicmFyeShkcGx5cilcbmxpYnJhcnkodGlkeXRleHQpXG5saWJyYXJ5KHN0cmluZ3IpXG5saWJyYXJ5KHNjYWxlcylcblxub3JpZ29wIDwtIG9wdGlvbnMoXCJodHRyX29hdXRoX2NhY2hlXCIpXG5vcHRpb25zKGh0dHJfb2F1dGhfY2FjaGUgPSBUUlVFKVxuXG5hcGlfa2V5IDwtIFwiNVBndFM3bGpxNVpiQm9YbmVtVTVxSGU2MlwiXG5hcGlfc2VjcmV0IDwtIFwiTTQ0TGVkdVE0em95RHhRSWtBRmplSUpycERoV25iNXhBU0R2aGFoVGxyQXZPaE43ZnhcIlxuYWNjZXNzX3Rva2VuIDwtIFwiNzQzMDI5NzI0NzUwOTQyMjA4LUpMRXAyNlhyand2UTFDUEpVWHd2ZFVNTGthODJjZ3hcIlxuYWNjZXNzX3NlY3JldCA8LSBcIlhSTWVNQmFPZ1F5MkJDMUJkOWlKQVJmTUl5SzQwVkt5SUkxWlJjZjluUzBxZFwiXG50b2tlbiA8LSBjcmVhdGVfdG9rZW4oXG4gIGFwcCA9IFwiS3lsZVJlc2VhcmNoQXBwXCIsXG4gIGNvbnN1bWVyX2tleSA9IGFwaV9rZXksXG4gIGNvbnN1bWVyX3NlY3JldCA9IGFwaV9zZWNyZXQsXG4gIGFjY2Vzc190b2tlbiA9IGFjY2Vzc190b2tlbixcbiAgYWNjZXNzX3NlY3JldCA9IGFjY2Vzc19zZWNyZXRcbilcbmBgYCJ9 -->
+<pre class="r"><code>library(rtweet)
+library(ggplot2)
+library(tidyr)
+library(dplyr)
+library(tidytext)
+library(stringr)
+library(scales)
+
+origop &lt;- options(&quot;httr_oauth_cache&quot;)
+options(httr_oauth_cache = TRUE)
+
+api_key &lt;- &quot;5PgtS7ljq5ZbBoXnemU5qHe62&quot;
+api_secret &lt;- &quot;M44LeduQ4zoyDxQIkAFjeIJrpDhWnb5xASDvhahTlrAvOhN7fx&quot;
+access_token &lt;- &quot;743029724750942208-JLEp26XrjwvQ1CPJUXwvdUMLka82cgx&quot;
+access_secret &lt;- &quot;XRMeMBaOgQy2BC1Bd9iJARfMIyK40VKyII1ZRcf9nS0qd&quot;
+token &lt;- create_token(
+  app = &quot;KyleResearchApp&quot;,
+  consumer_key = api_key,
+  consumer_secret = api_secret,
+  access_token = access_token,
+  access_secret = access_secret
+)</code></pre>
+<!-- rnb-source-end -->
+<!-- rnb-chunk-end -->
+<!-- rnb-text-begin -->
+<div id="comparing-tweet-archives" class="section level1">
+<h1>Comparing Tweet Archives</h1>
+<!-- rnb-text-end -->
+<!-- rnb-chunk-begin -->
 <!-- rnb-chunk-end -->
 <!-- rnb-text-begin -->
 <!-- rnb-text-end -->
 <!-- rnb-chunk-begin -->
-<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxubGlicmFyeSh0aWR5dGV4dClcblxuYGBgIn0= -->
-<pre class="r"><code>library(tidytext)
-</code></pre>
-<!-- rnb-source-end -->
-<!-- rnb-output-begin eyJkYXRhIjoiRXJyb3IgaW4gbGlicmFyeSh0aWR5dGV4dCkgOiB0aGVyZSBpcyBubyBwYWNrYWdlIGNhbGxlZCDigJh0aWR5dGV4dOKAmVxuIn0= -->
-<pre><code>Error in library(tidytext) : there is no package called ‘tidytext’</code></pre>
-<!-- rnb-output-end -->
 <!-- rnb-chunk-end -->
 <!-- rnb-text-begin -->
 <!-- rnb-text-end -->
-<!-- rnb-chunk-begin -->
-<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxudGlkeV9uZXdzMjQgPC0gdHdlZXRzX25ld3MyNCAlPiUgXG4gIHNlbGVjdChzY3JlZW5fbmFtZSwgc3RhdHVzX2lkLCB0ZXh0KSAlPiUgXG4gIHVubmVzdF90b2tlbnMod29yZCwgdGV4dCkgJT4lXG4gIGFudGlfam9pbihzdG9wX3dvcmRzKVxuXG50aWR5X2VOQ0EgPC0gdHdlZXRzX2VOQ0EgJT4lIFxuICBzZWxlY3Qoc2NyZWVuX25hbWUsIHN0YXR1c19pZCwgdGV4dCkgJT4lIFxuICB1bm5lc3RfdG9rZW5zKHdvcmQsIHRleHQpICU+JVxuICBhbnRpX2pvaW4oc3RvcF93b3JkcylcblxuXG5mcmVxdWVuY3kgPC0gYmluZF9yb3dzKG11dGF0ZSh0aWR5X25ld3MyNCwgc2NyZWVuX25hbWUgPSBcIk5ld3MyNFwiKSxcbiAgICAgICAgICAgICAgICAgICAgICAgbXV0YXRlKHRpZHlfZU5DQSwgc2NyZWVuX25hbWUgPSBcImVOQ0FcIikpICU+JSBcbiAgbXV0YXRlKHdvcmQgPSBzdHJfZXh0cmFjdCh3b3JkLCBcIlthLXonXStcIikpICU+JVxuICBjb3VudChzY3JlZW5fbmFtZSwgd29yZCkgJT4lXG4gIGdyb3VwX2J5KHNjcmVlbl9uYW1lKSAlPiVcbiAgbXV0YXRlKHByb3BvcnRpb24gPSBuIC8gc3VtKG4pKSAlPiUgXG4gIHNlbGVjdCgtbikgJT4lIFxuICBwaXZvdF93aWRlcihuYW1lc19mcm9tID0gc2NyZWVuX25hbWUsIHZhbHVlc19mcm9tID0gcHJvcG9ydGlvbikgJT4lXG4gIHBpdm90X2xvbmdlcihgTmV3czI0YDpgZU5DQWAsXG4gICAgICAgICAgICAgICBuYW1lc190byA9IFwic2NyZWVuIG5hbWVcIiwgdmFsdWVzX3RvID0gXCJwcm9wb3J0aW9uXCIpXG5cbmdncGxvdChmcmVxdWVuY3ksIGFlcyh4ID0gcHJvcG9ydGlvbiwgeSA9IHdvcmQsIFxuICAgICAgICAgICAgICAgICAgICAgIGNvbG9yID0gcHJvcG9ydGlvbikpICtcbiAgZ2VvbV9hYmxpbmUoY29sb3IgPSBcImdyYXk0MFwiLCBsdHkgPSAyKSArXG4gIGdlb21faml0dGVyKGFscGhhID0gMC4xLCBzaXplID0gMi41LCB3aWR0aCA9IDAuMywgaGVpZ2h0ID0gMC4zKSArXG4gIGdlb21fdGV4dChhZXMobGFiZWwgPSB3b3JkKSwgY2hlY2tfb3ZlcmxhcCA9IFRSVUUsIHZqdXN0ID0gMS41KSArXG4gIHNjYWxlX2NvbG9yX2dyYWRpZW50KGxpbWl0cyA9IGMoMCwgMC4wMDEpLCBcbiAgICAgICAgICAgICAgICAgICAgICAgbG93ID0gXCJkYXJrc2xhdGVncmF5NFwiLCBoaWdoID0gXCJncmF5NzVcIikgK1xuICBmYWNldF93cmFwKH5gc2NyZWVuIG5hbWVgLCBuY29sID0gMikgK1xuICB0aGVtZShsZWdlbmQucG9zaXRpb249XCJub25lXCIpICtcbiAgbGFicyh5ID0gXCJQcm9wb3J0aW9uXCIsIHggPSBOVUxMKVxuYGBgIn0= -->
-<pre class="r"><code>tidy_news24 &lt;- tweets_news24 %&gt;% 
-  select(screen_name, status_id, text) %&gt;% 
-  unnest_tokens(word, text) %&gt;%
-  anti_join(stop_words)
-
-tidy_eNCA &lt;- tweets_eNCA %&gt;% 
-  select(screen_name, status_id, text) %&gt;% 
-  unnest_tokens(word, text) %&gt;%
-  anti_join(stop_words)
-
-
-frequency &lt;- bind_rows(mutate(tidy_news24, screen_name = &quot;News24&quot;),
-                       mutate(tidy_eNCA, screen_name = &quot;eNCA&quot;)) %&gt;% 
-  mutate(word = str_extract(word, &quot;[a-z&#39;]+&quot;)) %&gt;%
-  count(screen_name, word) %&gt;%
-  group_by(screen_name) %&gt;%
-  mutate(proportion = n / sum(n)) %&gt;% 
-  select(-n) %&gt;% 
-  pivot_wider(names_from = screen_name, values_from = proportion) %&gt;%
-  pivot_longer(`News24`:`eNCA`,
-               names_to = &quot;screen name&quot;, values_to = &quot;proportion&quot;)
-
-ggplot(frequency, aes(x = proportion, y = word, 
-                      color = proportion)) +
-  geom_abline(color = &quot;gray40&quot;, lty = 2) +
-  geom_jitter(alpha = 0.1, size = 2.5, width = 0.3, height = 0.3) +
-  geom_text(aes(label = word), check_overlap = TRUE, vjust = 1.5) +
-  scale_color_gradient(limits = c(0, 0.001), 
-                       low = &quot;darkslategray4&quot;, high = &quot;gray75&quot;) +
-  facet_wrap(~`screen name`, ncol = 2) +
-  theme(legend.position=&quot;none&quot;) +
-  labs(y = &quot;Proportion&quot;, x = NULL)</code></pre>
-<!-- rnb-source-end -->
-<!-- rnb-chunk-end -->
-<!-- rnb-text-begin -->
-<!-- rnb-text-end -->
-<!-- rnb-chunk-begin -->
-<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxudGlkeV9uZXdzMjQgJT4lIFxuICBpbm5lcl9qb2luKG5yY19qb3kpICU+JVxuICBjb3VudCh3b3JkLCBzb3J0ID0gVFJVRSlcblxuYGBgIn0= -->
-<pre class="r"><code>tidy_news24 %&gt;% 
-  inner_join(nrc_joy) %&gt;%
-  count(word, sort = TRUE)
-</code></pre>
-<!-- rnb-source-end -->
-<!-- rnb-output-begin eyJkYXRhIjoiSm9pbmluZywgYnkgPSBcIndvcmRcIlxuIn0= -->
-<pre><code>Joining, by = &quot;word&quot;</code></pre>
-<!-- rnb-output-end -->
-<!-- rnb-frame-begin eyJtZXRhZGF0YSI6eyJjbGFzc2VzIjpbInRibF9kZiIsInRibCIsImRhdGEuZnJhbWUiXSwibnJvdyI6OTAsIm5jb2wiOjIsInN1bW1hcnkiOnsiQSB0aWJibGUiOlsiOTAgeCAyIl19fSwicmRmIjoiSDRzSUFBQUFBQUFBQnUxVlMyN2JNQkJWYk11T2xMUUlrSFBFUUZMa0JPMEJpcTZDN0VZU0pVOUNjVlIrSEx1cm5xYkhURHBTeEU4TmRORjlGN1Q1aHVMTW0zbEQ4dHVYaDAvbFE1bGwyVEpiWlhtMnpIbWFyVDkvdmIyN3Y4dXkxWUxSR2E4VTQvK0J2N3JteVdpODR2RTRMNnllQU9VOFh3OGFEYWtaYmFDdW5SSE5EUE5HZ04zTm9PeG9MN1RxaGJLejVkendYS2hhZUZ3VDQzN3c2eHVVVW5UZ1EyMXFxZ0dWLzNwVmsvU0J5cHEwZG9QRndLUVFoMEdTaVlaTDdOK3BKZ1F1VVJuWHRsaGpRcXBIUlJydDBlT1I5UUFZY2pKQzd3TmpzeU95cURxUDkwZ3l5YWlBQ2xSREtsUmtBNVZKMW5QUWZiSm1ERGpwaVN4NXF5OXlCZFlLN2IrcnVLb3habDVKTURZQ0FjOCtlaVdKR3JPTGVsUkVQMFFFVGpVaEdCMkRlNDJWME1md21YYWhPSGtOVXBxZ0J3elc2VVE5S1dFd0ltcWk5bGdubXB6WEdybTZRZEM4MW1TOHQzVURQWFFpSXRXRmpMbVBKSGhDUlNQTUlEVFlrRWhEcnZJTUM5RlhtbENHbkF0aHJCNmRlY09GT01ESUlpR1dpd1B2OEdtMUlJMlFRZjhXdTEwcWNZdGFzR3llZDk2U0RucXVKeERLM1dwd0hxdzdoekowMWJKelB2aHloNTc4QmZiY0RzaXBoZkFGdDYzRU9tWmJzb0dyaHBWTUxWTm54NXhSdFNLdC9BYlZFeXNWdUV6UWgxZzkwWE5JUU1MTE1kUjkzVHZkQkZUU3dKRXhjYnNlV0phd2ZqNW9ZVXhzaUhMUXRNTUtiWWg3K2QyeEdyd2ZJdnVORm0xeVpURHMrWkQ3NnE2TWhENGNOaXRBUmlXSzhld0tuVWhqM0RCeDhQVHNqcVd5QVkxdEVmckU4U25VbGtQTmhpczJrR0oyMWswTWZaT1dUdkdWSk9rWXErZFVDeGg2Y3crZEM2MjRSKzFDWjd5UWJpTFFGSWlXRTJob3BKNWxINmFybGYyT240MDVuNHpsUEJiL01NNytqNytOUDk2NFhFRXZUUGIrdmkxODA0M0MrVWRRbmV3b05MMXMvYTVSdXNWUC9ubDdlL3QxNnJybWU5bTc5c2F5QVF0YnZoZDZ3ZWoxWk11R3BpZU1OeTJ1NTJaSU41L3BFd1AzN01pa3VhbDNUajNmM042UEVlWk1zNW5lT0g5TTVvdjNtSXUzMlZmdXUxcW9MajZ1dVlSSytDUHdrVk9lTXQ3eVBSUGVncEt0Wm12SnhxUENMNEMzVE1sbHI3OEJrM2wvZlhBSUFBQT0ifQ== -->
-<div data-pagedtable="false">
-<script data-pagedtable-source type="application/json">
-{"columns":[{"label":["word"],"name":[1],"type":["chr"],"align":["left"]},{"label":["n"],"name":[2],"type":["int"],"align":["right"]}],"data":[{"1":"jail","2":"6"},{"1":"prison","2":"5"},{"1":"accused","2":"4"},{"1":"death","2":"4"},{"1":"government","2":"4"},{"1":"sentence","2":"4"},{"1":"contempt","2":"3"},{"1":"illegal","2":"3"},{"1":"cocaine","2":"2"},{"1":"cold","2":"2"},{"1":"corruption","2":"2"},{"1":"explosion","2":"2"},{"1":"imprisonment","2":"2"},{"1":"insufficient","2":"2"},{"1":"minority","2":"2"},{"1":"overpaid","2":"2"},{"1":"serve","2":"2"},{"1":"shooting","2":"2"},{"1":"violence","2":"2"},{"1":"abandoned","2":"1"},{"1":"absence","2":"1"},{"1":"armed","2":"1"},{"1":"assault","2":"1"},{"1":"ban","2":"1"},{"1":"batter","2":"1"},{"1":"beating","2":"1"},{"1":"blast","2":"1"},{"1":"bleak","2":"1"},{"1":"bloodshed","2":"1"},{"1":"booze","2":"1"},{"1":"bound","2":"1"},{"1":"boy","2":"1"},{"1":"bribery","2":"1"},{"1":"brunt","2":"1"},{"1":"calls","2":"1"},{"1":"capture","2":"1"},{"1":"collapse","2":"1"},{"1":"conviction","2":"1"},{"1":"criminal","2":"1"},{"1":"cross","2":"1"},{"1":"damage","2":"1"},{"1":"danger","2":"1"},{"1":"delay","2":"1"},{"1":"desperate","2":"1"},{"1":"doubt","2":"1"},{"1":"embroiled","2":"1"},{"1":"estranged","2":"1"},{"1":"examination","2":"1"},{"1":"exile","2":"1"},{"1":"falsely","2":"1"},{"1":"fighting","2":"1"},{"1":"firearms","2":"1"},{"1":"force","2":"1"},{"1":"forced","2":"1"},{"1":"fraud","2":"1"},{"1":"guilty","2":"1"},{"1":"gun","2":"1"},{"1":"hit","2":"1"},{"1":"immediately","2":"1"},{"1":"implicate","2":"1"},{"1":"impossible","2":"1"},{"1":"imprisoned","2":"1"},{"1":"infection","2":"1"},{"1":"injured","2":"1"},{"1":"injury","2":"1"},{"1":"joke","2":"1"},{"1":"lawyer","2":"1"},{"1":"murder","2":"1"},{"1":"opposition","2":"1"},{"1":"player","2":"1"},{"1":"pressure","2":"1"},{"1":"prohibited","2":"1"},{"1":"questionable","2":"1"},{"1":"refused","2":"1"},{"1":"remains","2":"1"},{"1":"slam","2":"1"},{"1":"stealing","2":"1"},{"1":"suffering","2":"1"},{"1":"suppress","2":"1"},{"1":"threat","2":"1"},{"1":"toilet","2":"1"},{"1":"uncertain","2":"1"},{"1":"unconstitutional","2":"1"},{"1":"unemployed","2":"1"},{"1":"unfair","2":"1"},{"1":"vague","2":"1"},{"1":"virus","2":"1"},{"1":"words","2":"1"},{"1":"wrong","2":"1"},{"1":"wrongdoing","2":"1"}],"options":{"columns":{"min":{},"max":[10],"total":[2]},"rows":{"min":[10],"max":[10],"total":[90]},"pages":{}}}
-  </script>
 </div>
-<!-- rnb-frame-end -->
-<!-- rnb-chunk-end -->
-<!-- rnb-text-begin -->
-<!-- rnb-text-end -->
 
-<div id="rmd-source-code">LS0tDQp0aXRsZTogIlIgTm90ZWJvb2siDQpvdXRwdXQ6IGh0bWxfbm90ZWJvb2sNCi0tLQ0KDQpgYGB7cn0NCmxpYnJhcnkocnR3ZWV0KQ0KbGlicmFyeShnZ3Bsb3QyKQ0KbGlicmFyeSh0aWR5cikNCmxpYnJhcnkoZHBseXIpDQpsaWJyYXJ5KHRpZHl0ZXh0KQ0KbGlicmFyeShzdHJpbmdyKQ0KbGlicmFyeShzY2FsZXMpDQoNCm9yaWdvcCA8LSBvcHRpb25zKCJodHRyX29hdXRoX2NhY2hlIikNCm9wdGlvbnMoaHR0cl9vYXV0aF9jYWNoZSA9IFRSVUUpDQoNCmFwaV9rZXkgPC0gIjVQZ3RTN2xqcTVaYkJvWG5lbVU1cUhlNjIiDQphcGlfc2VjcmV0IDwtICJNNDRMZWR1UTR6b3lEeFFJa0FGamVJSnJwRGhXbmI1eEFTRHZoYWhUbHJBdk9oTjdmeCINCmFjY2Vzc190b2tlbiA8LSAiNzQzMDI5NzI0NzUwOTQyMjA4LUpMRXAyNlhyand2UTFDUEpVWHd2ZFVNTGthODJjZ3giDQphY2Nlc3Nfc2VjcmV0IDwtICJYUk1lTUJhT2dReTJCQzFCZDlpSkFSZk1JeUs0MFZLeUlJMVpSY2Y5blMwcWQiDQp0b2tlbiA8LSBjcmVhdGVfdG9rZW4oDQogIGFwcCA9ICJLeWxlUmVzZWFyY2hBcHAiLA0KICBjb25zdW1lcl9rZXkgPSBhcGlfa2V5LA0KICBjb25zdW1lcl9zZWNyZXQgPSBhcGlfc2VjcmV0LA0KICBhY2Nlc3NfdG9rZW4gPSBhY2Nlc3NfdG9rZW4sDQogIGFjY2Vzc19zZWNyZXQgPSBhY2Nlc3Nfc2VjcmV0DQopDQpgYGANCg0KYGBge3J9DQoNCg0KdXNlcl9uZXdzMjQgPC0gcnR3ZWV0Ojpsb29rdXBfdXNlcnModXNlcnMgPSAiTmV3czI0IikNCnVzZXJfZU5DQSA8LSBydHdlZXQ6Omxvb2t1cF91c2Vycyh1c2VycyA9ICJlTkNBIikNCnR3ZWV0c19uZXdzMjQgPC0gZ2V0X3RpbWVsaW5lKDE0Njk3NTc1LCBuID0gMTAwKQ0KdHdlZXRzX2VOQ0EgPC0gZ2V0X3RpbWVsaW5lKDMwMTMwOTM5MiwgbiA9IDEwMCkNCmBgYA0KDQpgYGB7ciBmaWcuaGVpZ2h0PTE1fQ0KdGlkeV9uZXdzMjQgPC0gdHdlZXRzX25ld3MyNCAlPiUgDQogIHNlbGVjdChzY3JlZW5fbmFtZSwgc3RhdHVzX2lkLCB0ZXh0KSAlPiUgDQogIHVubmVzdF90b2tlbnMod29yZCwgdGV4dCkgJT4lDQogIGFudGlfam9pbihzdG9wX3dvcmRzKQ0KDQp0aWR5X2VOQ0EgPC0gdHdlZXRzX2VOQ0EgJT4lIA0KICBzZWxlY3Qoc2NyZWVuX25hbWUsIHN0YXR1c19pZCwgdGV4dCkgJT4lIA0KICB1bm5lc3RfdG9rZW5zKHdvcmQsIHRleHQpICU+JQ0KICBhbnRpX2pvaW4oc3RvcF93b3JkcykNCg0KDQpmcmVxdWVuY3kgPC0gYmluZF9yb3dzKG11dGF0ZSh0aWR5X25ld3MyNCwgc2NyZWVuX25hbWUgPSAiTmV3czI0IiksDQogICAgICAgICAgICAgICAgICAgICAgIG11dGF0ZSh0aWR5X2VOQ0EsIHNjcmVlbl9uYW1lID0gImVOQ0EiKSkgJT4lIA0KICBtdXRhdGUod29yZCA9IHN0cl9leHRyYWN0KHdvcmQsICJbYS16J10rIikpICU+JQ0KICBjb3VudChzY3JlZW5fbmFtZSwgd29yZCkgJT4lDQogIGdyb3VwX2J5KHNjcmVlbl9uYW1lKSAlPiUNCiAgbXV0YXRlKHByb3BvcnRpb24gPSBuIC8gc3VtKG4pKSAlPiUgDQogIHNlbGVjdCgtbikgJT4lIA0KICBwaXZvdF93aWRlcihuYW1lc19mcm9tID0gc2NyZWVuX25hbWUsIHZhbHVlc19mcm9tID0gcHJvcG9ydGlvbikgJT4lDQogIHBpdm90X2xvbmdlcihgTmV3czI0YDpgZU5DQWAsDQogICAgICAgICAgICAgICBuYW1lc190byA9ICJzY3JlZW4gbmFtZSIsIHZhbHVlc190byA9ICJwcm9wb3J0aW9uIikNCg0KZ2dwbG90KGZyZXF1ZW5jeSwgYWVzKHggPSBwcm9wb3J0aW9uLCB5ID0gd29yZCwgDQogICAgICAgICAgICAgICAgICAgICAgY29sb3IgPSBwcm9wb3J0aW9uKSkgKw0KICBnZW9tX2FibGluZShjb2xvciA9ICJncmF5NDAiLCBsdHkgPSAyKSArDQogIGdlb21faml0dGVyKGFscGhhID0gMC4xLCBzaXplID0gMi41LCB3aWR0aCA9IDAuMywgaGVpZ2h0ID0gMC4zKSArDQogIGdlb21fdGV4dChhZXMobGFiZWwgPSB3b3JkKSwgY2hlY2tfb3ZlcmxhcCA9IFRSVUUsIHZqdXN0ID0gMS41KSArDQogIHNjYWxlX2NvbG9yX2dyYWRpZW50KGxpbWl0cyA9IGMoMCwgMC4wMDEpLCANCiAgICAgICAgICAgICAgICAgICAgICAgbG93ID0gImRhcmtzbGF0ZWdyYXk0IiwgaGlnaCA9ICJncmF5NzUiKSArDQogIGZhY2V0X3dyYXAofmBzY3JlZW4gbmFtZWAsIG5jb2wgPSAyKSArDQogIHRoZW1lKGxlZ2VuZC5wb3NpdGlvbj0ibm9uZSIpICsNCiAgbGFicyh5ID0gIlByb3BvcnRpb24iLCB4ID0gTlVMTCkNCmBgYA0KDQpgYGB7cn0NCm5yY19qb3kgPC0gZ2V0X3NlbnRpbWVudHMoIm5yYyIpICU+JSANCiAgZmlsdGVyKHNlbnRpbWVudCA9PSAibmVnYXRpdmUiKQ0KDQp0aWR5X25ld3MyNCAlPiUgDQogIGlubmVyX2pvaW4obnJjX2pveSkgJT4lDQogIGNvdW50KHdvcmQsIHNvcnQgPSBUUlVFKQ0KYGBgDQoNCg0K</div>
+<div id="rmd-source-code">LS0tDQp0aXRsZTogIlIgTm90ZWJvb2siDQpvdXRwdXQ6IGh0bWxfbm90ZWJvb2sNCi0tLQ0KDQpgYGB7cn0NCmxpYnJhcnkocnR3ZWV0KQ0KbGlicmFyeShnZ3Bsb3QyKQ0KbGlicmFyeSh0aWR5cikNCmxpYnJhcnkoZHBseXIpDQpsaWJyYXJ5KHRpZHl0ZXh0KQ0KbGlicmFyeShzdHJpbmdyKQ0KbGlicmFyeShzY2FsZXMpDQoNCm9yaWdvcCA8LSBvcHRpb25zKCJodHRyX29hdXRoX2NhY2hlIikNCm9wdGlvbnMoaHR0cl9vYXV0aF9jYWNoZSA9IFRSVUUpDQoNCmFwaV9rZXkgPC0gIjVQZ3RTN2xqcTVaYkJvWG5lbVU1cUhlNjIiDQphcGlfc2VjcmV0IDwtICJNNDRMZWR1UTR6b3lEeFFJa0FGamVJSnJwRGhXbmI1eEFTRHZoYWhUbHJBdk9oTjdmeCINCmFjY2Vzc190b2tlbiA8LSAiNzQzMDI5NzI0NzUwOTQyMjA4LUpMRXAyNlhyand2UTFDUEpVWHd2ZFVNTGthODJjZ3giDQphY2Nlc3Nfc2VjcmV0IDwtICJYUk1lTUJhT2dReTJCQzFCZDlpSkFSZk1JeUs0MFZLeUlJMVpSY2Y5blMwcWQiDQp0b2tlbiA8LSBjcmVhdGVfdG9rZW4oDQogIGFwcCA9ICJLeWxlUmVzZWFyY2hBcHAiLA0KICBjb25zdW1lcl9rZXkgPSBhcGlfa2V5LA0KICBjb25zdW1lcl9zZWNyZXQgPSBhcGlfc2VjcmV0LA0KICBhY2Nlc3NfdG9rZW4gPSBhY2Nlc3NfdG9rZW4sDQogIGFjY2Vzc19zZWNyZXQgPSBhY2Nlc3Nfc2VjcmV0DQopDQpgYGANCg0KDQoNCiMgQ29tcGFyaW5nIFR3ZWV0IEFyY2hpdmVzDQoNCmBgYHtyfQ0KbWVkaWFfYWdlbmN5X2RmIDwtIHJlYWQuY3N2KCJkYXRhX2luL21lZGlhX2FnZW5jeV90d2VldHMiKQ0KYGBgDQoNCmBgYHtyfQ0KDQpgYGANCg0K</div>
 
 
 

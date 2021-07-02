@@ -28,57 +28,15 @@ token <- create_token(
 )
 ```
 
+
+
+# Comparing Tweet Archives
+
 ```{r}
-
-
-user_news24 <- rtweet::lookup_users(users = "News24")
-user_eNCA <- rtweet::lookup_users(users = "eNCA")
-tweets_news24 <- get_timeline(14697575, n = 100)
-tweets_eNCA <- get_timeline(301309392, n = 100)
-```
-
-```{r fig.height=15}
-tidy_news24 <- tweets_news24 %>% 
-  select(screen_name, status_id, text) %>% 
-  unnest_tokens(word, text) %>%
-  anti_join(stop_words)
-
-tidy_eNCA <- tweets_eNCA %>% 
-  select(screen_name, status_id, text) %>% 
-  unnest_tokens(word, text) %>%
-  anti_join(stop_words)
-
-
-frequency <- bind_rows(mutate(tidy_news24, screen_name = "News24"),
-                       mutate(tidy_eNCA, screen_name = "eNCA")) %>% 
-  mutate(word = str_extract(word, "[a-z']+")) %>%
-  count(screen_name, word) %>%
-  group_by(screen_name) %>%
-  mutate(proportion = n / sum(n)) %>% 
-  select(-n) %>% 
-  pivot_wider(names_from = screen_name, values_from = proportion) %>%
-  pivot_longer(`News24`:`eNCA`,
-               names_to = "screen name", values_to = "proportion")
-
-ggplot(frequency, aes(x = proportion, y = word, 
-                      color = proportion)) +
-  geom_abline(color = "gray40", lty = 2) +
-  geom_jitter(alpha = 0.1, size = 2.5, width = 0.3, height = 0.3) +
-  geom_text(aes(label = word), check_overlap = TRUE, vjust = 1.5) +
-  scale_color_gradient(limits = c(0, 0.001), 
-                       low = "darkslategray4", high = "gray75") +
-  facet_wrap(~`screen name`, ncol = 2) +
-  theme(legend.position="none") +
-  labs(y = "Proportion", x = NULL)
+media_agency_df <- read.csv("data_in/media_agency_tweets")
 ```
 
 ```{r}
-nrc_joy <- get_sentiments("nrc") %>% 
-  filter(sentiment == "negative")
 
-tidy_news24 %>% 
-  inner_join(nrc_joy) %>%
-  count(word, sort = TRUE)
 ```
-
 
