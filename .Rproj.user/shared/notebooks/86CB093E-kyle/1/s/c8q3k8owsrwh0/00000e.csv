@@ -1,6 +1,0 @@
-"0","tidy_news24 %>% 
-  inner_join(nrc_joy) %>%
-  count(word, sort = TRUE)
-"
-"2","Joining, by = ""word""
-"
