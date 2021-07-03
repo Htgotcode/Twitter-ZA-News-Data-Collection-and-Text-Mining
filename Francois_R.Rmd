@@ -22,7 +22,9 @@ library(stringi)
 ```
 Importing data
 ```{r}
-media_tweets_df <- read_csv("data_in/media_agency_tweets.csv")
+media_agency_df <- read_csv("data_in/media_agency_tweets.csv")
+media_agency_df <- media_agency_df[ , colSums(is.na(media_agency_df)) < nrow(media_agency_df)]
+
 ```
 
 Wrangeling data
@@ -56,4 +58,11 @@ filtered_tweets<- media_tweets_df[grep("covid", media_tweets_df$text), ignore.ca
 media_tweets_df %>%
   str_extract_all(text, "([:alnum:]+\\s)*Covid-19[[:alnum:]\\s]*\\.")[[1]]
 ```
+Reasons for the media sources chosen:
+News 24 : Recognized by APP Annie (App Annie is the standard in app analytics and app market data) as the most known South African internet media source. (Chinese Academy of Cyberspace Studiespublisher=Springer (15 September 2018). World Internet Development Report 2017: Translated by Peng Ping. p. 203. ISBN 9783662575246. OCLC 1052766508.)
+Times Live
+EWN
+eNCA
+SABC
+Justify why we use these agencies. Size? Reputable? unbias?
 
