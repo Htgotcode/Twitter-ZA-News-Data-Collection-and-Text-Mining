@@ -4,5 +4,12 @@
 *.pper
 *.Rdata
 *.error
+<<<<<<< Updated upstream
 .Rproj.user/
 .Rproj.user\
+=======
+*.csv
+*.json
+*.json
+.Rproj.user
+>>>>>>> Stashed changes
