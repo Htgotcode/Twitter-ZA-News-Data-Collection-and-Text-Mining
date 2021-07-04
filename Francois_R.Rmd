@@ -73,6 +73,15 @@ picky_mtdf%>%
              word=="t.co"|
              word=="amp")) %>%
   count(word, sort=TRUE)
+
+
+```
+```{r}
+#finding the screen names of media angencies
+agencies<- media_agency_df %>%
+  select(screen_name) 
+agencies %>%
+  distinct(screen_name)
 ```
 Filtering DF
 ```{r}
@@ -120,11 +129,58 @@ Modeling the time data
 ```{r}
 #setting the date format
 SentiR_data$created_at = ymd_hms(SentiR_data$created_at)
+#filtering by news agency
+news24<- SentiR_data %>%
+  filter(screen_name=="News24")
+
+times_live<-SentiR_data %>%
+  filter(screen_name=="TimesLIVE")
+
+ewn<-SentiR_data %>%
+  filter(screen_name=="ewnupdates")
+
+sabc<-SentiR_data %>%
+  filter(screen_name=="SABCNews")
+
+eNCA<-SentiR_data %>%
+  filter(screen_name=="eNCA")
+```
+Graphs
+```{r}
+#graph for News24 sentiment over time
+ggplot(data=news24, aes(x=created_at, y=sentiment))+
+       geom_line(color="red", size=.5)+
+  theme_minimal()
 
 ```
+```{r}
+#graph for News24 sentiment over time
+ggplot(data=times_live, aes(x=created_at, y=sentiment))+
+       geom_line(color="red", size=.5)+
+  theme_minimal()
 
+```
+```{r}
+#graph for News24 sentiment over time
+ggplot(data=ewn, aes(x=created_at, y=sentiment))+
+       geom_line(color="red", size=.5)+
+  theme_minimal()
 
+```
+```{r}
+#graph for News24 sentiment over time
+ggplot(data=eNCA, aes(x=created_at, y=sentiment))+
+       geom_line(color="red", size=.5)+
+  theme_minimal()
 
+```
+```{r}
+#graph for News24 sentiment over time
+ggplot(data=sabc, aes(x=created_at, y=sentiment))+
+       geom_line(color="red", size=.5)+
+  theme_minimal()
+
+```
 
 #Kyles Code
 Topic Modelling
