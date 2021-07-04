@@ -9,6 +9,10 @@ install.packages("tidyverse")
 install.packages("sentimentr")
 install.packages("textdata")
 install.packages("stringi")
+install.packages("rtweet")
+install.packages("quanteda")
+install.packages("topicmodels")
+install.packages("reshape2")
 ```
 
 Importing Libraries
@@ -55,8 +59,15 @@ filtered_tweets<- media_tweets_df[grep("covid", media_tweets_df$text), ignore.ca
 ```
 
 ```{r}
-media_tweets_df %>%
-  str_extract_all(text, "([:alnum:]+\\s)*Covid-19[[:alnum:]\\s]*\\.")[[1]]
+#cleaning
+
+
+
+
+mytext<- media_agency_df%>%
+  select(text) 
+mytext <- get_sentences(mytext)
+sentiment(mytext)
 ```
 Reasons for the media sources chosen:
 News 24 : Recognized by APP Annie (App Annie is the standard in app analytics and app market data) as the most known South African internet media source. (Chinese Academy of Cyberspace Studiespublisher=Springer (15 September 2018). World Internet Development Report 2017: Translated by Peng Ping. p. 203. ISBN 9783662575246. OCLC 1052766508.)
@@ -70,4 +81,68 @@ eNCA: Not much info but seems popular. Used to E News from TV channel. Might not
 SABC: National news company with government ties. reaches a wide variety of viewers in different languages.
 
 Justify why we use these agencies. Size? Reputable? unbias?
+
+#Kyles Code
+Libraries
+```{r}
+library(rtweet)
+library(ggplot2)
+library(tidyr)
+library(dplyr)
+library(tidytext)
+library(stringr)
+library(scales)
+library(readr)
+library(lubridate)
+library(topicmodels)
+library(quanteda)
+library(reshape2)
+```
+
+
+
+
+```{r}
+media_agency_df <- read_csv("data_in/media_agency_tweets.csv")
+
+tidy_covid_media_df <- media_agency_df %>%
+  #filter(str_detect(text, fixed(covid_dictionary, ignore_case = TRUE))) %>%
+  filter(!str_detect(text, "^RT")) %>%
+  mutate(text = gsub(" ?(f|ht)tp(s?)://(.*)[.][a-z]+", "", text)) %>%
+  unnest_tokens(word, text, token = "tweets") %>%
+  filter(!word %in% stop_words$word,
+         !word %in% str_remove_all(stop_words$word, "'"),
+         str_detect(word, "[a-z]"),
+         !(word =="#sabcnews" |
+             word =="#enca" |
+             word =="https" |
+             word =="#dstv403" |
+             word =="t.co" |
+             word =="rt" |
+             word =="amp"))
+tidy_matrix <- tidy_covid_media_df %>% count(screen_name, word) %>% cast_dfm(screen_name, word, n)
+
+ 
+media_lda <- LDA(tidy_matrix, k = 12, control = list(seed = 1234))
+media_lda
+media_topics <- tidy(media_lda, matrix = "beta")
+media_topics
+media_top_terms <- media_topics %>%
+group_by(topic) %>%
+slice_max(beta, n = 10) %>%
+ungroup() %>%
+arrange(topic, -beta)
+ 
+
+media_top_terms %>%
+mutate(term = reorder_within(term, beta, topic)) %>%
+ggplot(aes(beta, term, fill = factor(topic))) +
+geom_col(show.legend = FALSE) +
+facet_wrap(~ topic, scales = "free") +
+scale_y_reordered()
+```
+Vader stuff
+```{r}
+vader_data<- read_csv("data_in/vader_df.csv")
+```
 
