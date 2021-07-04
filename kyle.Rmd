@@ -14,6 +14,8 @@ library(scales)
 library(readr)
 library(lubridate)
 library(vader)
+library(topicmodels)
+library(quanteda)
 
 origop <- options("httr_oauth_cache")
 options(httr_oauth_cache = TRUE)
@@ -42,6 +44,8 @@ media_agency_df <- media_agency_df %>%
 
 write_as_csv(media_agency_df, "data_in/media_agency_tweets")
 media_agency_df <- read_csv("data_in/media_agency_tweets.csv")
+
+media_agency_df <- media_agency_df[ , colSums(is.na(media_agency_df)) < nrow(media_agency_df)]
 ```
 
 
@@ -55,18 +59,56 @@ ggplot(media_agency_df, aes(x = created_at, fill = screen_name)) +
 ```
 
 ```{r}
+
+covid_dictionary <- c("herd", "immunity", "incubation", "job", "loss", "Kits", "lockdown", "mask", "N95", "outbreak", "pandemic", "quarantine", "recovery", "sanitiser", "transmission", "Underlying", "conditions", "Ventilators", "WHO", "xenophobia", "youTube", "zoonotic", "stay-at-home", "covid", "coronavirus", "hyrdoxychloroquine", "asymptomatic", "frontline", "virus", "self-isolation", "disinfectant", "shelter-in-place", "masks", "SARS-CoV-2", "ICU", "corona", "reopen", "distancing", "covering", "furlough", "tracer", "easing", "remdesivir", "mail-in", "hornet", "antibody", "in-person", "defund", "racism", "looting", "loot", "reopen", "two-metre", "pandemic", "looter", "distancing", "dexamethasone", "racial", "vaccine")
+
 #tidy df
-remove_reg <- "&amp;|&lt;|&gt;"
 tidy_covid_media_df <- media_agency_df %>% 
+  #filter(str_detect(text, fixed(covid_dictionary, ignore_case = TRUE))) %>% 
+  filter(!str_detect(text, "^RT")) %>% 
   mutate(text = gsub(" ?(f|ht)tp(s?)://(.*)[.][a-z]+", "", text)) %>% 
-  filter(!str_detect(text, "^RT")) %>%
-  mutate(text = str_remove_all(text, remove_reg)) %>%
   unnest_tokens(word, text, token = "tweets") %>%
   filter(!word %in% stop_words$word,
          !word %in% str_remove_all(stop_words$word, "'"),
          str_detect(word, "[a-z]"),
-         !word %in% "cov",
-         !word %in% "coronavirus")
+         !(word =="#sabcnews" |
+             word =="#enca" |
+             word =="https" |
+             word =="#dstv403" |
+             word =="t.co" |
+             word =="rt" |
+             word =="amp"))
+
+#top words
+top_words <- tidy_covid_media_df %>% 
+  anti_join(stop_words) %>% 
+  count(word) %>% 
+  arrange(desc(n))
+top_words %>% 
+  slice(1:20) %>% 
+  ggplot(aes(reorder(word, -n), n, fill = word)) +
+  geom_bar(stat="identity") +
+  theme_minimal() +
+  theme(
+    axis.text.x = element_text(angle = 60, hjust = 1, size = 13),
+    plot.title = element_text(hjust = 0.5, size = 18)
+    ) +
+  ylab("Frequency") +
+  xlab ("") +
+  ggtitle("Most frequent media agency tweets") +
+  guides(fill=FALSE)
+
+#tf-idf
+tidy_covid_media_tfidf <- tidy_covid_media_df %>% 
+  select(created_at, word) %>% 
+  count(word, created_at) %>% 
+  bind_tf_idf(word, created_at, n)
+
+#top_tfidf
+tidy_covid_media_tfidf %>% 
+  slice(-(1:582)) %>% 
+  arrange(desc(tf_idf))
+
 
 #calculate a frequency for each person and word
 frequency <- tidy_media_agency_df %>% 
@@ -84,9 +126,38 @@ frequency <- frequency %>%
 
 #yearly 
 ```
+
 ```{r}
-vader_df <- vader_df(tidy_covid_media_df$word)
-vader_df <- vader_df %>% rename("word" = text)
+vader_df <- vader_df(media_agency_df$text)
+write_as_csv(vader_df, "data_in/vader_df")
 tidy_covid_media_df <- tidy_covid_media_df %>% left_join(vader_df)
+```
+# topics covered, sentiment in general
+(either with specific lexicons for relevant keywords or other sentiment lexicons/dictionaries),
+sentiment of specific topics, frequency of posts, network interaction metrics, etc.
+
+```{r}
+x <- str_extract_all(media_agency_df$text, "([:alnum:]+\\s)*Covid-19[[:alnum:]\\s]*\\.")[[1]]
+```
+```{r}
+media_agency_df <- read_csv("data_in/media_agency_tweets.csv")
+tidy_matrix <- tidy_covid_media_df %>% count(screen_name, word) %>% cast_dfm(screen_name, word, n)
+
+media_lda <- LDA(tidy_matrix, k = 10, control = list(seed = 1234))
+media_lda
+media_topics <- tidy(media_lda, matrix = "beta")
+media_topics
+media_top_terms <- media_topics %>%
+  group_by(topic) %>%
+  slice_max(beta, n = 10) %>% 
+  ungroup() %>%
+  arrange(topic, -beta)
+
+media_top_terms %>%
+  mutate(term = reorder_within(term, beta, topic)) %>%
+  ggplot(aes(beta, term, fill = factor(topic))) +
+  geom_col(show.legend = FALSE) +
+  facet_wrap(~ topic, scales = "free") +
+  scale_y_reordered()
 ```
 
