@@ -62,6 +62,23 @@ ggplot(media_agency_df, aes(x = created_at, fill = screen_name)) +
 
 covid_dictionary <- c("herd", "immunity", "incubation", "job", "loss", "Kits", "lockdown", "mask", "N95", "outbreak", "pandemic", "quarantine", "recovery", "sanitiser", "transmission", "Underlying", "conditions", "Ventilators", "WHO", "xenophobia", "youTube", "zoonotic", "stay-at-home", "covid", "coronavirus", "hyrdoxychloroquine", "asymptomatic", "frontline", "virus", "self-isolation", "disinfectant", "shelter-in-place", "masks", "SARS-CoV-2", "ICU", "corona", "reopen", "distancing", "covering", "furlough", "tracer", "easing", "remdesivir", "mail-in", "hornet", "antibody", "in-person", "defund", "racism", "looting", "loot", "reopen", "two-metre", "pandemic", "looter", "distancing", "dexamethasone", "racial", "vaccine")
 
+#JUST tidy
+media_agency_df <- media_agency_df %>% 
+  mutate(text = gsub(" ?(f|ht)tp(s?)://(.*)[.][a-z]+", "", text),
+         text = gsub("&amp", "", text),
+         text = gsub("(RT|via)((?:\\b\\W*@\\w+)+)", "", text),
+         text = gsub("@\\w+", "", text),
+         text = gsub("[[:punct:]]", "", text),
+         text = gsub("[[:digit:]]", "", text),
+         text = gsub("http\\w+", "", text),
+         text = gsub("[ \t]{2,}", "", text),
+         text = gsub("^\\s+|\\s+$", "", text),
+         text = gsub("&amp", "", text)) %>% 
+  mutate(text = str_replace_all(text," "," "),
+         text = str_replace_all(text,"RT @[a-z,A-Z]*: "," "),
+         text = str_replace_all(text,"#[a-z,A-Z]*"," "),
+         text = str_replace_all(text,"@[a-z,A-Z]*"," "))
+  
 #tidy df and unnest
 tidy_covid_media_df <- media_agency_df %>% 
   #filter(str_detect(text, fixed(covid_dictionary, ignore_case = TRUE))) %>% 
@@ -79,24 +96,7 @@ tidy_covid_media_df <- media_agency_df %>%
              word =="rt" |
              word =="amp"))
 
-#JUST tidy
 
-media_agency_df <- media_agency_df %>% 
-  mutate(text = gsub(" ?(f|ht)tp(s?)://(.*)[.][a-z]+", "", text),
-         text = gsub("&amp", "", text),
-         text = gsub("(RT|via)((?:\\b\\W*@\\w+)+)", "", text),
-         text = gsub("@\\w+", "", text),
-         text = gsub("[[:punct:]]", "", text),
-         text = gsub("[[:digit:]]", "", text),
-         text = gsub("http\\w+", "", text),
-         text = gsub("[ \t]{2,}", "", text),
-         text = gsub("^\\s+|\\s+$", "", text),
-         text = gsub("&amp", "", text)) %>% 
-  mutate(text = str_replace_all(text," "," "),
-         text = str_replace_all(text,"RT @[a-z,A-Z]*: "," "),
-         text = str_replace_all(text,"#[a-z,A-Z]*"," "),
-         text = str_replace_all(text,"@[a-z,A-Z]*"," "))
-  
 
 #top words
 top_words <- tidy_covid_media_df %>% 
@@ -149,7 +149,10 @@ frequency <- frequency %>%
 ```{r}
 vader_df <- vader_df(media_agency_df$text)
 write_as_csv(vader_df, "data_in/vader_df")
-tidy_covid_media_df <- tidy_covid_media_df %>% left_join(vader_df)
+
+vader_df <- read_csv("data_in/vader_df.csv")
+media_vader_df <- media_agency_df %>% left_join(vader_df)
+
 ```
 # topics covered, sentiment in general
 (either with specific lexicons for relevant keywords or other sentiment lexicons/dictionaries),
