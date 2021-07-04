@@ -2,6 +2,21 @@
 title: "R Notebook"
 output: html_notebook
 ---
+Reasons for the media sources chosen:
+News 24 : Recognized by APP Annie (App Annie is the standard in app analytics and app market data) as the most known South African internet media source. (Chinese Academy of Cyberspace Studiespublisher=Springer (15 September 2018). World Internet Development Report 2017: Translated by Peng Ping. p. 203. ISBN 9783662575246. OCLC 1052766508.)
+
+Times Live : South Africa's second-biggest news website, published by Arena Holdings (Times Live website)
+
+EWN : Not much info but it can be considered to be popular because it originated from 2 radio stations (KFM and CapeTalk)
+
+eNCA: Not much info but seems popular. Used to E News from TV channel. Might not be as trustworthy as there has been complaints about racism recently.
+
+SABC: National news company with government ties. reaches a wide variety of viewers in different languages.
+
+Justify why we use these agencies. Size? Reputable? unbias?
+
+
+
 Importing Packages
 ```{r}
 install.packages("tidytext")
@@ -93,36 +108,25 @@ write_csv(sr_data,"data_in/sentimentr_data.csv")
 Adding time data to sentiment df
 ```{r}
 time_data <- media_agency_df %>%
-  select(X1,created_at)
+  select(X1,created_at,screen_name)
 
 SentiR_data <-left_join(time_data,sr_data,
                         by=c("X1"="element_id"))
 write_csv(SentiR_data,"data_in/sr_df_time.csv")
+
+```
+
+Modeling the time data
+```{r}
+#setting the date format
+SentiR_data$created_at = ymd_hms(SentiR_data$created_at)
+
 ```
 
 
 
-Reasons for the media sources chosen:
-News 24 : Recognized by APP Annie (App Annie is the standard in app analytics and app market data) as the most known South African internet media source. (Chinese Academy of Cyberspace Studiespublisher=Springer (15 September 2018). World Internet Development Report 2017: Translated by Peng Ping. p. 203. ISBN 9783662575246. OCLC 1052766508.)
-
-Times Live : South Africa's second-biggest news website, published by Arena Holdings (Times Live website)
-
-EWN : Not much info but it can be considered to be popular because it originated from 2 radio stations (KFM and CapeTalk)
-
-eNCA: Not much info but seems popular. Used to E News from TV channel. Might not be as trustworthy as there has been complaints about racism recently.
-
-SABC: National news company with government ties. reaches a wide variety of viewers in different languages.
-
-Justify why we use these agencies. Size? Reputable? unbias?
 
 #Kyles Code
-Libraries
-```{r}
-
-```
-
-
-
 Topic Modelling
 ```{r}
 tidy_covid_media_df <- media_agency_df %>%
