@@ -88,7 +88,7 @@ mytext<- media_agency_df%>%
   select(text) 
 mytext <- get_sentences(mytext)
 sr_data <-sentiment(mytext)
-write_csv(sr_data,'sentimentr_data.csv')
+write_csv(sr_data,"data_in/sentimentr_data.csv")
 ```
 Reasons for the media sources chosen:
 News 24 : Recognized by APP Annie (App Annie is the standard in app analytics and app market data) as the most known South African internet media source. (Chinese Academy of Cyberspace Studiespublisher=Springer (15 September 2018). World Internet Development Report 2017: Translated by Peng Ping. p. 203. ISBN 9783662575246. OCLC 1052766508.)
