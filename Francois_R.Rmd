@@ -57,41 +57,9 @@ media_agency_df <- media_agency_df[ , colSums(is.na(media_agency_df)) < nrow(med
 
 ```
 
-Wrangeling data
+Wrangeling and cleaning data
 ```{r}
-picky_mtdf<- media_tweets_df %>%
-  select(screen_name,text) %>%
-   unnest_tokens("word", text)
-
-data(stop_words)
-
-picky_mtdf <- picky_mtdf %>%
-  anti_join(stop_words)
-
-picky_mtdf%>%
-  filter(!(word=="https"|
-             word=="rt"|
-             word=="t.co"|
-             word=="amp")) %>%
-  count(word, sort=TRUE)
-
-
-```
-```{r}
-#finding the screen names of media angencies
-agencies<- media_agency_df %>%
-  select(screen_name) 
-agencies %>%
-  distinct(screen_name)
-```
-Filtering DF
-```{r}
-filtered_tweets<- media_tweets_df[grep("covid", media_tweets_df$text), ignore.case = TRUE]
-```
-Seniment Analysis with SentimentR
-```{r}
-#cleaning
-
+#Cleaning data
 media_agency_df <- media_agency_df %>%
   mutate(text = gsub(" ?(f|ht)tp(s?)://(.*)[.][a-z]+", "", text),
          text = gsub("&amp", "", text),
@@ -107,8 +75,37 @@ media_agency_df <- media_agency_df %>%
          text = str_replace_all(text,"RT @[a-z,A-Z]*: "," "),
          text = str_replace_all(text,"#[a-z,A-Z]*"," "),
          text = str_replace_all(text,"@[a-z,A-Z]*"," "))
- 
- 
+
+
+#tidying data
+tidy_covid_media_df <- media_agency_df %>%
+  #filter(str_detect(text, fixed(covid_dictionary, ignore_case = TRUE))) %>%
+  filter(!str_detect(text, "^RT")) %>%
+  mutate(text = gsub(" ?(f|ht)tp(s?)://(.*)[.][a-z]+", "", text)) %>%
+  unnest_tokens(word, text, token = "tweets") %>%
+  filter(!word %in% stop_words$word,
+         !word %in% str_remove_all(stop_words$word, "'"),
+         str_detect(word, "[a-z]"),
+         !(word =="#sabcnews" |
+             word =="#enca" |
+             word =="https" |
+             word =="#dstv403" |
+             word =="t.co" |
+             word =="rt" |
+             word =="amp"))
+
+```
+```{r}
+#finding the screen names of media angencies
+agencies<- media_agency_df %>%
+  select(screen_name) 
+agencies %>%
+  distinct(screen_name)
+```
+
+Seniment Analysis with SentimentR
+```{r}
+
 mytext<- media_agency_df%>%
   select(text) 
 mytext <- get_sentences(mytext)
@@ -129,6 +126,7 @@ write_csv(SentiR_data,"data_in/sr_df_time.csv")
 Modeling the time data
 ```{r}
 #setting the date format
+#NB only run date format once
 SentiR_data$created_at = ymd_hms(SentiR_data$created_at)
 #filtering by news agency
 news24<- SentiR_data %>%
@@ -199,21 +197,7 @@ ggplot(data=sabc, aes(x=created_at, y=sentiment))+
 #Kyles Code
 Topic Modelling
 ```{r}
-tidy_covid_media_df <- media_agency_df %>%
-  #filter(str_detect(text, fixed(covid_dictionary, ignore_case = TRUE))) %>%
-  filter(!str_detect(text, "^RT")) %>%
-  mutate(text = gsub(" ?(f|ht)tp(s?)://(.*)[.][a-z]+", "", text)) %>%
-  unnest_tokens(word, text, token = "tweets") %>%
-  filter(!word %in% stop_words$word,
-         !word %in% str_remove_all(stop_words$word, "'"),
-         str_detect(word, "[a-z]"),
-         !(word =="#sabcnews" |
-             word =="#enca" |
-             word =="https" |
-             word =="#dstv403" |
-             word =="t.co" |
-             word =="rt" |
-             word =="amp"))
+
 tidy_matrix <- tidy_covid_media_df %>% count(screen_name, word) %>% cast_dfm(screen_name, word, n)
 
  
