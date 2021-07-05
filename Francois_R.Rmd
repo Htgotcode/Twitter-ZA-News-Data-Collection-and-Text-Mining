@@ -48,6 +48,7 @@ library(lubridate)
 library(topicmodels)
 library(quanteda)
 library(reshape2)
+library(zoo)
 ```
 Importing data
 ```{r}
@@ -149,36 +150,49 @@ Graphs
 ```{r}
 #graph for News24 sentiment over time
 ggplot(data=news24, aes(x=created_at, y=sentiment))+
-       geom_line(color="red", size=.5)+
-  theme_minimal()
+       geom_line(color="pink", size=.5)+
+  geom_smooth(aes(y=rollmean(sentiment,7,  na.pad=TRUE))) +
+  theme_minimal()+
+  labs(title="News24")
 
 ```
 ```{r}
 #graph for News24 sentiment over time
 ggplot(data=times_live, aes(x=created_at, y=sentiment))+
-       geom_line(color="red", size=.5)+
-  theme_minimal()
+       geom_line(color="pink", size=.5)+
+  geom_smooth(aes(y=rollmean(sentiment,7,  na.pad=TRUE))) +
+  theme_minimal()+
+  labs(title = "Times Live")
 
 ```
 ```{r}
 #graph for News24 sentiment over time
 ggplot(data=ewn, aes(x=created_at, y=sentiment))+
-       geom_line(color="red", size=.5)+
-  theme_minimal()
+       geom_line(color="pink", size=.5)+
+  geom_smooth(aes(y=rollmean(sentiment,7,  na.pad=TRUE))) +
+  theme_minimal()+
+  labs(title = "EWN")
 
+
+#qplot(x=created_at, y=sentiment, data=ewn, geom='smooth',span=.5)
 ```
 ```{r}
 #graph for News24 sentiment over time
 ggplot(data=eNCA, aes(x=created_at, y=sentiment))+
-       geom_line(color="red", size=.5)+
-  theme_minimal()
+       geom_line(color="pink", size=.5)+
+  geom_smooth(aes(y=rollmean(sentiment,7,  na.pad=TRUE))) +
+  theme_minimal()+
+  labs(title = "eNCA")
 
 ```
 ```{r}
 #graph for News24 sentiment over time
 ggplot(data=sabc, aes(x=created_at, y=sentiment))+
-       geom_line(color="red", size=.5)+
-  theme_minimal()
+       geom_line(color="pink", size=.5)+
+  geom_smooth(aes(y=rollmean(sentiment,7,  na.pad=TRUE))) +
+  theme_minimal()+
+  labs(title = "SABC")
+  
 
 ```
 
