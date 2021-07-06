@@ -20,6 +20,9 @@ library(lubridate)
 library(vader)
 library(topicmodels)
 library(quanteda)
+library(lubridate)
+library(zoo)
+library(plotly)
 
 origop <- options("httr_oauth_cache")
 options(httr_oauth_cache = TRUE)
@@ -38,7 +41,6 @@ token <- create_token(
 ```
 
 ```{r}
-#Get tweets
 media_agency_df <- get_timeline("News24", n = 3200)
 media_agency_df <- media_agency_df %>% 
   mutate(rbind(rtweet::get_timeline("eNCA", n = 3200))) %>% 
@@ -88,23 +90,30 @@ media_agency_df <- media_agency_df %>%
   
 #tidy df and unnest
 tidy_covid_media_df <- media_agency_df %>% 
-  #filter(str_detect(text, fixed(covid_dictionary, ignore_case = TRUE))) %>% 
-  filter(!str_detect(text, "^RT")) %>% 
-  mutate(text = gsub(" ?(f|ht)tp(s?)://(.*)[.][a-z]+", "", text)) %>% 
-  unnest_tokens(word, text, token = "tweets") %>%
+  filter(str_detect(text, fixed(covid_dictionary, ignore_case = TRUE))) %>%
+  filter(!str_detect(text, "^RT")) %>%
+  mutate(text = gsub(" ?(f|ht)tp(s?)://(.*)[.][a-z]+", "", text)) %>%
+  unnest_tokens(word, text, token = "tweets") %>% 
   filter(!word %in% stop_words$word,
          !word %in% str_remove_all(stop_words$word, "'"),
          str_detect(word, "[a-z]"),
-         !(word =="#sabcnews" |
-             word =="#enca" |
+         !(word =="sabcnews" |
+             word =="enca" |
              word =="https" |
-             word =="#dstv403" |
+             word =="dstv" |
+             word =="sabckzn" |
+             word =="anc" |
+             word =="south" |
+             word =="africa" |
+             word =="dstv403" |
              word =="t.co" |
+             word =="itus" |
              word =="rt" |
              word =="amp"))
 
+```
 
-
+```{r tf-idf}
 #top words
 top_words <- tidy_covid_media_df %>% 
   anti_join(stop_words) %>% 
@@ -137,10 +146,10 @@ tidy_covid_media_tfidf %>%
 
 
 #calculate a frequency for each person and word
-frequency <- tidy_media_agency_df %>% 
+frequency <- tidy_covid_media_df %>% 
   group_by(screen_name) %>% 
   count(word, sort = TRUE) %>% 
-  left_join(tidy_media_agency_df %>% 
+  left_join(tidy_covid_media_df %>% 
               group_by(screen_name) %>% 
               summarise(total = n())) %>%
   mutate(freq = n/total)
@@ -155,26 +164,80 @@ frequency <- frequency %>%
 
 ```{r VADER}
 vader_df <- vader_df(media_agency_df$text)
-write_as_csv(vader_df, "data_in/vader_df")
+write_as_csv(vader_df, "data_in/vader_covid_df")
 
 vader_df <- read_csv("data_in/vader_df.csv")
+vader_covid_df <- read_csv("data_in/vader_covid_df.csv")
 vader_df <- vader_df %>% mutate("X1" = row_number())
 sentimentr_df <- read_csv("data_in/sentimentr_data.csv")
 media_vader_df <- media_agency_df %>% left_join(vader_df, by = "X1")
 
-media_vader_df %>%
-  select(status_id, screen_name, text.x, compound, pos, neu, neg)
+#sentiment
+ggplot(data=media_vader_df, aes(x=created_at, y=rollmean(compound, 30,  na.pad=TRUE))) +
+       geom_line(color="pink", size=.5)+
+  geom_smooth() +
+  theme_minimal()+
+  facet_wrap(~screen_name) +
+  scale_y_continuous(expand = c(0,0), breaks = c(-0.4,-0.2,0,0.2,0.4)) +
+  ylim(c(-0.4, 0.4))
 
-media_vader_df %>% 
-  select(status_id, screen_name, text.x, compound, pos, neu, neg) %>% 
-  ggplot() +
-  geom_point(aes(text.x, compound)) +
-  facet_wrap(~screen_name)
+#sentiment
+ggplot(data=media_vader_df, aes(x=created_at, fill = screen_name)) +
+  stat_smooth(media_vader_df %>% filter(screen_name == "News24"), mapping =  aes(y = mean(compound)))+
+  stat_smooth(media_vader_df %>% filter(screen_name == "ewnupdates"), mapping =  aes(y = compound))+
+  stat_smooth(media_vader_df %>% filter(screen_name == "eNCA"), mapping =  aes(y = compound))+
+  stat_smooth(media_vader_df %>% filter(screen_name == "SABCNews"), mapping =  aes(y = compound))+
+  stat_smooth(media_vader_df %>% filter(screen_name == "TimesLIVE"), mapping =  aes(y = compound))+
+  theme_minimal()+
+  scale_y_continuous(expand = c(0,0), breaks = c(-0.1, 0)) 
+  
+
+ggplot(data=media_vader_df, aes(x=created_at, colour = screen_name)) +
+  geom_line(media_vader_df %>% filter(screen_name == "News24"), mapping =  aes(y = rollmean(compound, k = 30, na.pad = TRUE)))+
+  geom_line(media_vader_df %>% filter(screen_name == "ewnupdates"), mapping = aes(y = rollmean(compound, k = 30, na.pad = TRUE)))+
+  geom_line(media_vader_df %>% filter(screen_name == "eNCA"), mapping = aes(y = rollmean(compound, k = 30, na.pad = TRUE)))+
+  geom_line(media_vader_df %>% filter(screen_name == "SABCNews"), mapping = aes(y = rollmean(compound, k = 30, na.pad = TRUE)))+
+  geom_line(media_vader_df %>% filter(screen_name == "TimesLIVE"), mapping = aes(y = rollmean(compound, k = 30, na.pad = TRUE)))+
+  theme_minimal()+
+  scale_y_continuous(expand = c(0,0)) 
+
+ggplot(media_vader_df %>% arrange(compound) %>% mutate(X1 = factor(X1, levels = X1)), aes(x=X1)) +
+  geom_point(mapping =  aes(y = compound)) +
+  theme_minimal()+
+  scale_y_continuous(expand = c(0,0)) 
 
 ```
-# topics covered, sentiment in general
-(either with specific lexicons for relevant keywords or other sentiment lexicons/dictionaries),
-sentiment of specific topics, frequency of posts, network interaction metrics, etc.
+
+```{r Interactions}
+media_vader_df %>% select(favorite_count, retweet_count) %>% mutate(favorite_count + retweet_count)
+media_vader_df %>% mutate(created_at = as.Date(created_at)) %>%  group_by(created_at) %>% mutate(sum = sum(favorite_count + retweet_count)) 
+ media_vader_df %>% mutate(created_at = as.Date(created_at)) %>%  group_by(created_at, screen_name) %>% mutate(retweet_daily = sum(retweet_count), favorite_daily = sum(favorite_count)) %>% ungroup()
+
+plot <- media_vader_df %>% mutate(created_at = as.Date(created_at)) %>%  group_by(created_at) %>% mutate(retweet_daily = sum(retweet_count), favorite_daily = sum(favorite_count), sum = sum(favorite_count + retweet_count)) %>% 
+  ggplot(aes(created_at)) +
+  geom_ribbon(aes(ymin = 0, ymax = retweet_daily, y = sum, fill = "blue"))
+  
+ggplotly(plot)
+
+plot <- media_vader_df %>% mutate(created_at = as.Date(created_at)) %>%  group_by(created_at) %>% mutate(sum = sum(favorite_count + retweet_count)) %>% 
+  ggplot(aes(created_at, sum)) +
+  geom_ribbon(aes(ymin = 0, ymax = sum)) 
+  
+ggplotly(plot)
+
+media_vader_df %>% 
+   filter(screen_name == "SABCNews") %>% 
+  slice_max(favorite_count + retweet_count + quoted_retweet_count) 
+
+class(media_vader_df$created_at)
+
+# top tweets
+# eNCA Call for ministers over 60 to resign https://t.co/wlEjJGEpuk
+# ewn KZN boy (5) gets home safely after taxi driver kicks him out for not having fare https://t.co/tfO9axodar https://t.co/yx3YjV9vao
+# TimesLIVE	Do you approve of Duduzane running for president? https://t.co/hCDVQGHRWy
+# News24 Coca-Cola lost $4 billion in market value after Cristiano Ronaldo suggested people drink water instead | @BISouthAfrica
+# SABCNews BREAKING NEWS: King of Eswatini has fled amid public violence in the country https://t.co/1jv8vVCw9d
+```
 
 ```{r Topic Modelling}
 tidy_matrix <- tidy_covid_media_df %>% count(screen_name, word) %>% cast_dfm(screen_name, word, n)
@@ -190,14 +253,53 @@ media_top_terms <- media_topics %>%
   arrange(topic, -beta)
 
 media_top_terms %>%
-  mutate(term = reorder_within(term, beta, topic)) %>% 
-  # pivot_wider(id_cols = term, names_from = topic, values_from = beta) %>% 
-  # rename("Covid Spread in Gauteng" = 2, "Vaccines" = 3, "idk" = 4, "Health in Africa" = 5) %>% 
-  # pivot_longer(cols = c(2,3,4,5), names_to = "topic", values_to = "beta") %>% 
-  # drop_na() %>% 
+  mutate(term = reorder_within(term, beta, topic)) %>%
+  pivot_wider(id_cols = term, names_from = topic, values_from = beta) %>%
+  rename("Nations Address" = 2, "Getting vaccinated for third wave" = 3, "Announcement of vaccine" = 4, "Covid-19: South Africa update" = 5, "Vaccination distributions" = 6) %>%
+  pivot_longer(cols = c(2,3,4,5,6), names_to = "topic", values_to = "beta") %>%
+  drop_na() %>%
   ggplot(aes(beta, term, fill = factor(topic))) +
   geom_col(show.legend = FALSE) +
-  facet_wrap(~topic, scales = "free") +
+  facet_wrap(~ topic, scales = "free") +
   scale_y_reordered()
+```
+
+```{r Gap k justify}
+
+install.packages("ldatuning")
+
+
+install.packages("devtools")
+devtools::install_github("nikita-moor/ldatuning")
+
+
+library("ldatuning")
+
+
+library("topicmodels")
+data("AssociatedPress", package="topicmodels")
+dtm <- AssociatedPress[1:10, ]
+
+
+result <- FindTopicsNumber(
+  tidy_matrix,
+  topics = seq(from = 2, to = 15, by = 1),
+  metrics = c("Griffiths2004", "CaoJuan2009", "Arun2010", "Deveaud2014"),
+  method = "Gibbs",
+  control = list(seed = 77),
+  mc.cores = 2L,
+  verbose = TRUE
+)
+
+
+##  fit models... done.
+##  calculate metrics:
+##   Griffiths2004... done.
+##   CaoJuan2009... done.
+##   Arun2010... done.
+##   Deveaud2014... done.
+
+
+FindTopicsNumber_plot(result)
 ```
 
