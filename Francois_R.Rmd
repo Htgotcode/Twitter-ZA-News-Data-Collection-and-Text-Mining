@@ -243,6 +243,7 @@ covid_dictionary <- c("herd", "immunity", "incubation", "job", "loss", "Kits", "
                       "social-distancing","police","regulations","symptoms","testing",
                       "positive-tests","negative-tests","confirmed-cases","restrictions",
                       "deaths","infected","recoveries","level","jobs","unemployed",
-                      "doctors","infections",)
+                      "doctors","infections","sanitise","sanitiser","sanitisation"
+                      )
 ```
 
