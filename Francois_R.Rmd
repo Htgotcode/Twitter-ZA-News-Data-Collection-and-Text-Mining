@@ -19,6 +19,7 @@ Chapter 10 of the Constitution of the Republic of South Africa, 1996 makes provi
 #4 of the 5 is ranked among the top 10 most visited publication sites websites in south africa as found by 
 https://mybroadband.co.za/news/internet/358453-here-are-south-africas-most-popular-news-websites.html.
 These sites are the first sites on the top 10 list of publication sites that include general news along with news about covid-19 that do not have major historical issues that could bring their credibility in question.
+Reasons that other news or publishing sources that are ranked higher were not used is due to the fact that these sources either only focus on specific news like new technology or financial aspects, or these sources are not as popular throughout the whole of South Africa.
 
 Importing Packages
 ```{r}
