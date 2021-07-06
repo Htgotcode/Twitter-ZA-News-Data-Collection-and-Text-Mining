@@ -147,50 +147,61 @@ eNCA<-SentiR_data %>%
 Graphs
 ```{r}
 #graph for News24 sentiment over time
-ggplot(data=news24, aes(x=created_at, y=sentiment))+
+ggplot(data=news24, aes(x=created_at, y=rollmean(sentiment, 30,  na.pad=TRUE))) +
        geom_line(color="pink", size=.5)+
-  geom_smooth(aes(y=rollmean(sentiment,7,  na.pad=TRUE))) +
+  geom_smooth() +
   theme_minimal()+
-  labs(title="News24")
+  facet_wrap(~screen_name) +
+  scale_y_continuous(expand = c(0,0), breaks = c(-0.4,-0.2,0,0.2,0.4)) +
+  ylim(c(-0.4, 0.4))
 
 ```
 ```{r}
-#graph for News24 sentiment over time
-ggplot(data=times_live, aes(x=created_at, y=sentiment))+
+#graph for Times Live sentiment over time
+ggplot(data=times_live, aes(x=created_at, y=rollmean(sentiment, 30,  na.pad=TRUE))) +
        geom_line(color="pink", size=.5)+
-  geom_smooth(aes(y=rollmean(sentiment,7,  na.pad=TRUE))) +
+  geom_smooth() +
   theme_minimal()+
-  labs(title = "Times Live")
+  facet_wrap(~screen_name) +
+  scale_y_continuous(expand = c(0,0), breaks = c(-0.4,-0.2,0,0.2,0.4)) +
+  ylim(c(-0.4, 0.4))
+
 
 ```
 ```{r}
-#graph for News24 sentiment over time
-ggplot(data=ewn, aes(x=created_at, y=sentiment))+
+#graph for EWN sentiment over time
+ggplot(data=ewn, aes(x=created_at, y=rollmean(sentiment, 30,  na.pad=TRUE))) +
        geom_line(color="pink", size=.5)+
-  geom_smooth(aes(y=rollmean(sentiment,7,  na.pad=TRUE))) +
+  geom_smooth() +
   theme_minimal()+
-  labs(title = "EWN")
+  facet_wrap(~screen_name) +
+  scale_y_continuous(expand = c(0,0), breaks = c(-0.4,-0.2,0,0.2,0.4)) +
+  ylim(c(-0.4, 0.4))
 
-
-#qplot(x=created_at, y=sentiment, data=ewn, geom='smooth',span=.5)
-```
-```{r}
-#graph for News24 sentiment over time
-ggplot(data=eNCA, aes(x=created_at, y=sentiment))+
-       geom_line(color="pink", size=.5)+
-  geom_smooth(aes(y=rollmean(sentiment,7,  na.pad=TRUE))) +
-  theme_minimal()+
-  labs(title = "eNCA")
 
 ```
 ```{r}
-#graph for News24 sentiment over time
-ggplot(data=sabc, aes(x=created_at, y=sentiment))+
+#graph for eNCA sentiment over time
+ggplot(data=eNCA, aes(x=created_at, y=rollmean(sentiment, 30,  na.pad=TRUE))) +
        geom_line(color="pink", size=.5)+
-  geom_smooth(aes(y=rollmean(sentiment,7,  na.pad=TRUE))) +
+  geom_smooth() +
   theme_minimal()+
-  labs(title = "SABC")
-  
+  facet_wrap(~screen_name) +
+  scale_y_continuous(expand = c(0,0), breaks = c(-0.4,-0.2,0,0.2,0.4)) +
+  ylim(c(-0.4, 0.4))
+
+
+```
+```{r}
+#graph for SABC sentiment over time
+ggplot(data=sabc, aes(x=created_at, y=rollmean(sentiment, 30,  na.pad=TRUE))) +
+       geom_line(color="pink", size=.5)+
+  geom_smooth() +
+  theme_minimal()+
+  facet_wrap(~screen_name) +
+  scale_y_continuous(expand = c(0,0), breaks = c(-0.4,-0.2,0,0.2,0.4)) +
+  ylim(c(-0.4, 0.4))
+
 
 ```
 
