@@ -5,27 +5,21 @@ output: html_notebook
 Reasons for the media sources chosen:
 News 24 : Recognized by APP Annie (App Annie is the standard in app analytics and app market data) as the most known South African internet media source. (Chinese Academy of Cyberspace Studiespublisher=Springer (15 September 2018). World Internet Development Report 2017: Translated by Peng Ping. p. 203. ISBN 9783662575246. OCLC 1052766508.)
 
-Times Live : South Africa's second-biggest news website, published by Arena Holdings (Times Live website)
+Times Live : Claim to be South Africa's second-biggest news website, published by Arena Holdings (Times Live website). No evidence found to disprove this claim. In top 10 of most visited publication websites for South Africa.
 
-EWN : Not much info but it can be considered to be popular because it originated from 2 radio stations (KFM and CapeTalk)
+EWN : Not much info but it can be considered to be popular because it originated from 2 radio stations (KFM and CapeTalk), Makes it a popular and people hear about it without actively having to go and search for the news agency themselves. In top 10 of most visited publication websites for South Africa.
 
-eNCA: Not much info but seems popular. Used to E News from TV channel. Might not be as trustworthy as there has been complaints about racism recently.
+eNCA: Not much info but seems popular. Used to E News from TV channel. Might not be as trustworthy as there has been complaints about racism recently. In top 10 of most visited publication websites for South Africa.
 
-SABC: National news company with government ties. reaches a wide variety of viewers in different languages.
-
-Justify why we use these agencies. Size? Reputable? unbias?
-What qualities makes a news source credible and reputable?
-
-Machinery of care: Good news sources have significant processes and resources dedicated to promoting accuracy, and correcting error.
-
-Transparency: Good news sources clearly mark opinion columns as opinion, disclose conflicts of interest, indicate in stories where information was obtained and how it was verified, and provide links to sources.
-
-Expertise: Good news sources hire reporters with reporting or area expertise who have been educated in the processes of ethical journalism. Where new writers with other expertise are brought in, they are educated by the organization.
-
-Agenda: The primary mission of a good news source is to inform its readers, not elect Democrats, promote tax cuts, or reform schools. You should absolutely read writers with activist missions like these, but do not treat them as “pure” news sources.
-(https://webliteracy.pressbooks.com/chapter/what-makes-a-trustworthy-news-source/)
+SABC: National news company with government ties. Reaches a wide variety of viewers in different languages. The company is both state owned and a public broadcaster company.https://www.businesslive.co.za/bd/national/media/2015-05-20-sabc-both-state-owned-company-and-public-broadcaster-minister-says/
 
 
+Chapter 10 of the Constitution of the Republic of South Africa, 1996 makes provision for good governance of news media and what they publish.
+
+The other 4 of the 5 is ranked among the top 10 most visited publication sites websites in south africa as found by 
+https://mybroadband.co.za/news/internet/358453-here-are-south-africas-most-popular-news-websites.html.
+These sites are the first sites on the top 10 list of publication sites that include general news along with news about covid-19 that do not have major historical issues that could bring their credibility in question.
+Reasons that other news or publishing sources that are ranked higher were not used is due to the fact that these sources either only focus on specific news like new technology or financial aspects, or these sources are not as popular throughout the whole of South Africa.
 
 Importing Packages
 ```{r}
@@ -248,6 +242,8 @@ covid_dictionary <- c("herd", "immunity", "incubation", "job", "loss", "Kits", "
                       "curfew","johnssons","astrazeneca","hospitals","social-distance",
                       "social-distancing","police","regulations","symptoms","testing",
                       "positive-tests","negative-tests","confirmed-cases","restrictions",
-                      "deaths","")
+                      "deaths","infected","recoveries","level","jobs","unemployed",
+                      "doctors","infections","sanitise","sanitiser","sanitisation"
+                      )
 ```
 
