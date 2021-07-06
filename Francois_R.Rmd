@@ -14,6 +14,16 @@ eNCA: Not much info but seems popular. Used to E News from TV channel. Might not
 SABC: National news company with government ties. reaches a wide variety of viewers in different languages.
 
 Justify why we use these agencies. Size? Reputable? unbias?
+What qualities makes a news source credible and reputable?
+
+Machinery of care: Good news sources have significant processes and resources dedicated to promoting accuracy, and correcting error.
+
+Transparency: Good news sources clearly mark opinion columns as opinion, disclose conflicts of interest, indicate in stories where information was obtained and how it was verified, and provide links to sources.
+
+Expertise: Good news sources hire reporters with reporting or area expertise who have been educated in the processes of ethical journalism. Where new writers with other expertise are brought in, they are educated by the organization.
+
+Agenda: The primary mission of a good news source is to inform its readers, not elect Democrats, promote tax cuts, or reform schools. You should absolutely read writers with activist missions like these, but do not treat them as “pure” news sources.
+(https://webliteracy.pressbooks.com/chapter/what-makes-a-trustworthy-news-source/)
 
 
 
@@ -233,5 +243,11 @@ scale_y_reordered()
 Vader stuff
 ```{r}
 vader_data<- read_csv("data_in/vader_df.csv")
+
+covid_dictionary <- c("herd", "immunity", "incubation", "job", "loss", "Kits", "lockdown", "mask", "N95", "outbreak", "pandemic", "quarantine", "recovery", "sanitiser", "transmission", "Underlying", "conditions", "Ventilators", "WHO", "xenophobia", "youTube", "zoonotic", "stay-at-home", "covid", "coronavirus", "hyrdoxychloroquine", "asymptomatic", "frontline", "virus", "self-isolation", "disinfectant", "shelter-in-place", "masks", "SARS-CoV-2", "ICU", "corona", "reopen", "distancing", "covering", "furlough", "tracer", "easing", "remdesivir", "mail-in", "hornet", "antibody", "in-person", "defund", "racism", "looting", "loot", "reopen", "two-metre", "pandemic", "looter", "distancing", "dexamethasone", "racial", "vaccine",
+                      "curfew","johnssons","astrazeneca","hospitals","social-distance",
+                      "social-distancing","police","regulations","symptoms","testing",
+                      "positive-tests","negative-tests","confirmed-cases","restrictions",
+                      "deaths","")
 ```
 
