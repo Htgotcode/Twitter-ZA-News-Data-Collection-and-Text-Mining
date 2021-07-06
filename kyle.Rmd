@@ -24,6 +24,9 @@ library(lubridate)
 library(zoo)
 library(plotly)
 library(forcats)
+library(igraph)
+library(ggraph)
+library(widyr)
 
 origop <- options("httr_oauth_cache")
 options(httr_oauth_cache = TRUE)
@@ -169,7 +172,179 @@ tidy_media_tf_idf %>%
   geom_col(show.legend = FALSE) +
   facet_wrap(~screen_name, ncol = 2, scales = "free") +
   labs(x = "tf-idf", y = NULL)
+```
 
+```{r n-grams}
+#bigrams
+tidy_bigram_df <- media_agency_df %>% 
+  #filter(str_detect(text, fixed(covid_dictionary, ignore_case = TRUE))) %>%
+  filter(!str_detect(text, "^RT")) %>%
+  mutate(text = gsub(" ?(f|ht)tp(s?)://(.*)[.][a-z]+", " ", text)) %>%
+  unnest_tokens(bigram, text, token = "ngrams", n = 2)
+
+bigrams_separated <- tidy_bigram_df %>%
+  separate(bigram, c("word1", "word2"), sep = " ")
+
+bigrams_filtered <- bigrams_separated %>%
+  filter(!word1 %in% stop_words$word) %>%
+  filter(!word2 %in% stop_words$word)
+
+# new bigram counts:
+bigram_counts <- bigrams_filtered %>% 
+  count(word1, word2, sort = TRUE)
+
+bigrams_united <- bigrams_filtered %>%
+  unite(bigram, word1, word2, sep = " ")
+
+#tf-idf bigrams
+bigram_tf_idf <- bigrams_united %>%
+  count(screen_name, bigram) %>%
+  bind_tf_idf(bigram, screen_name, n) %>%
+  arrange(desc(tf_idf))
+
+bigram_tf_idf %>%
+  group_by(screen_name) %>%
+  slice_max(tf_idf, n = 15) %>%
+  ungroup() %>%
+  ggplot(aes(tf_idf, fct_reorder(bigram, tf_idf), fill = screen_name)) +
+  geom_col(show.legend = FALSE) +
+  facet_wrap(~screen_name, ncol = 2, scales = "free") +
+  labs(x = "tf-idf", y = NULL)
+
+bigrams_separated %>%
+  filter(word1 == "not") %>%
+  count(word1, word2, sort = TRUE)
+
+#weights and graphs
+bigram_graph <- bigram_counts %>%
+  filter(n > 40) %>%
+  graph_from_data_frame()
+
+set.seed(1234)
+a <- grid::arrow(type = "closed", length = unit(.15, "inches"))
+ggraph(bigram_graph, layout = "fr") +
+  geom_edge_link(aes(edge_alpha = n), show.legend = FALSE,
+                 arrow = a, end_cap = circle(.07, 'inches')) +
+  geom_node_point(color = "lightblue", size = 5) +
+  geom_node_text(aes(label = name), vjust = 1, hjust = 1) +
+  theme_void()
+
+#not words
+AFINN <- get_sentiments("afinn")
+not_words <- bigrams_separated %>%
+  filter(word1 == "not") %>%
+  inner_join(AFINN, by = c(word2 = "word")) %>%
+  count(word2, value, sort = TRUE)
+not_words %>%
+  mutate(contribution = n * value) %>%
+  arrange(desc(abs(contribution))) %>%
+  head(20) %>%
+  mutate(word2 = reorder(word2, contribution)) %>%
+  ggplot(aes(n * value, word2, fill = n * value > 0)) +
+  geom_col(show.legend = FALSE) +
+  labs(x = "Sentiment value * number of occurrences",
+       y = "Words preceded by \"not\"")
+
+negation_words <- c("not", "no", "never", "without")
+negated_words <- bigrams_separated %>%
+  filter(word1 %in% negation_words) %>%
+  inner_join(AFINN, by = c(word2 = "word")) %>%
+  count(word1, word2, value, sort = TRUE)
+negated_words %>%
+  mutate(contribution = n * value) %>%
+  arrange(desc(abs(contribution))) %>%
+  head(20) %>%
+  mutate(word2 = reorder(word2, contribution)) %>%
+  ggplot(aes(n * value, word2, fill = n * value > 0)) +
+  geom_col(show.legend = FALSE) + 
+  facet_wrap(~word1) +
+  labs(x = "Sentiment value * # number of occurrences",
+       y = "Words preceded by negation terms")
+
+#trigrams
+tidy_trigram_df <- media_agency_df %>%
+  filter(!str_detect(text, "^RT")) %>%
+  mutate(text = gsub(" ?(f|ht)tp(s?)://(.*)[.][a-z]+", " ", text)) %>%
+  unnest_tokens(trigram, text, token = "ngrams", n = 3) 
+
+trigrams_separated <- tidy_trigram_df %>%
+separate(trigram, c("word1", "word2", "word3"), sep = " ")
+
+trigrams_filtered <- trigrams_separated %>%
+  filter(!word1 %in% stop_words$word) %>%
+  filter(!word2 %in% stop_words$word) %>% 
+  filter(!word3 %in% stop_words$word) 
+
+# new trigrams counts:
+trigram_counts <- trigrams_filtered %>% 
+  count(word1, word2, word3, sort = TRUE)
+
+trigrams_united <- trigrams_filtered %>%
+  unite(trigram, word1, word2, word3, sep = " ")
+
+#tf-idf trigrams
+tidy_trigram_df <- trigrams_united %>%
+  count(screen_name, trigram) %>%
+  bind_tf_idf(trigram, screen_name, n) %>%
+  arrange(desc(tf_idf))
+
+tidy_trigram_df %>%
+  group_by(screen_name) %>%
+  slice_max(tf_idf, n = 10) %>%
+  ungroup() %>%
+  ggplot(aes(tf_idf, fct_reorder(trigram, tf_idf), fill = screen_name)) +
+  geom_col(show.legend = FALSE) +
+  facet_wrap(~screen_name, ncol = 2, scales = "free") +
+  labs(x = "tf-idf", y = NULL)
+
+```
+
+```{r Counting and correlating among sections}
+media_agency_section_words <- media_agency_df %>%
+  mutate(section = row_number() %/% 10) %>%
+  filter(section > 0) %>%
+  unnest_tokens(word, text) %>%
+  filter(!word %in% stop_words$word)
+
+media_agency_section_words
+
+# count words co-occuring within sections
+word_pairs <- media_agency_section_words %>%
+  pairwise_count(word, section, sort = TRUE)
+
+word_pairs
+
+# we need to filter for at least relatively common words first
+word_cors <- media_agency_section_words %>%
+  group_by(word) %>%
+  filter(n() >= 20) %>%
+  pairwise_cor(word, section, sort = TRUE)
+
+word_cors
+# Correlation of next word
+word_cors %>%
+  filter(item1 == "vaccine")
+
+word_cors %>%
+  filter(item1 %in% c("covid", "vaccine", "lockdown", "guateng")) %>%
+  group_by(item1) %>%
+  slice_max(correlation, n = 6) %>%
+  ungroup() %>%
+  mutate(item2 = reorder(item2, correlation)) %>%
+  ggplot(aes(item2, correlation)) +
+  geom_bar(stat = "identity") +
+  facet_wrap(~ item1, scales = "free") +
+  coord_flip()
+
+set.seed(1234)
+word_cors %>%
+  filter(correlation > .7) %>%
+  graph_from_data_frame() %>%
+  ggraph(layout = "fr") +
+  geom_edge_link(aes(edge_alpha = correlation), show.legend = FALSE) +
+  geom_node_point(color = "lightblue", size = 5) +
+  geom_node_text(aes(label = name), repel = TRUE) +
+  theme_void()
 ```
 
 ```{r VADER}
