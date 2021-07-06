@@ -114,7 +114,7 @@ mytext<- media_agency_df%>%
   select(text) 
 mytext <- get_sentences(mytext)
 sr_data <-sentiment(mytext)
-write_csv(sr_data,"data_in/sentimentr_data.csv")
+#write_csv(sr_data,"data_in/sentimentr_data.csv")
 ```
 Adding time data to sentiment df
 ```{r}
@@ -123,7 +123,7 @@ time_data <- media_agency_df %>%
 
 SentiR_data <-left_join(time_data,sr_data,
                         by=c("X1"="element_id"))
-write_csv(SentiR_data,"data_in/sr_df_time.csv")
+#write_csv(SentiR_data,"data_in/sr_df_time.csv")
 
 ```
 
