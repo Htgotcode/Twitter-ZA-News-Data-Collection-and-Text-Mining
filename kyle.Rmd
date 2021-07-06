@@ -9,6 +9,7 @@ frequency of tweets posted on a topic
 
 ```{r}
 library(rtweet)
+library(twitteR)
 library(ggplot2)
 library(tidyr)
 library(dplyr)
@@ -38,6 +39,7 @@ token <- create_token(
   access_token = access_token,
   access_secret = access_secret
 )
+twitteR::
 ```
 
 ```{r}
@@ -86,11 +88,12 @@ media_agency_df <- media_agency_df %>%
   mutate(text = str_replace_all(text," "," "),
          text = str_replace_all(text,"RT @[a-z,A-Z]*: "," "),
          text = str_replace_all(text,"#[a-z,A-Z]*"," "),
-         text = str_replace_all(text,"@[a-z,A-Z]*"," "))
+         text = str_replace_all(text,"@[a-z,A-Z]*"," ")) 
+  #filter(str_detect(text, fixed(covid_dictionary, ignore_case = TRUE))) 
   
 #tidy df and unnest
 tidy_covid_media_df <- media_agency_df %>% 
-  filter(str_detect(text, fixed(covid_dictionary, ignore_case = TRUE))) %>%
+  #filter(str_detect(text, fixed(covid_dictionary, ignore_case = TRUE))) %>%
   filter(!str_detect(text, "^RT")) %>%
   mutate(text = gsub(" ?(f|ht)tp(s?)://(.*)[.][a-z]+", "", text)) %>%
   unnest_tokens(word, text, token = "tweets") %>% 
@@ -169,7 +172,6 @@ write_as_csv(vader_df, "data_in/vader_covid_df")
 vader_df <- read_csv("data_in/vader_df.csv")
 vader_covid_df <- read_csv("data_in/vader_covid_df.csv")
 vader_df <- vader_df %>% mutate("X1" = row_number())
-sentimentr_df <- read_csv("data_in/sentimentr_data.csv")
 media_vader_df <- media_agency_df %>% left_join(vader_df, by = "X1")
 
 #sentiment
@@ -180,6 +182,13 @@ ggplot(data=media_vader_df, aes(x=created_at, y=rollmean(compound, 30,  na.pad=T
   facet_wrap(~screen_name) +
   scale_y_continuous(expand = c(0,0), breaks = c(-0.4,-0.2,0,0.2,0.4)) +
   ylim(c(-0.4, 0.4))
+
+media_vader_df %>% filter(compound != 0)%>% mutate(created_at = as.Date(created_at)) %>%  group_by(created_at) %>% mutate(compound_daily = mean(compound), pos_daily = mean(pos), neg_daily = mean(neg), neu_daily = mean(neu))
+
+media_vader_df %>% filter(compound != 0) %>% mutate(created_at = as.Date(created_at)) %>%  group_by(created_at) %>% mutate(compound_daily = mean(compound), pos_daily = mean(pos), neg_daily = mean(neg), neu_daily = mean(neu)) %>% 
+  ggplot(aes(created_at)) +
+  geom_line(aes(y = compound_daily, colour = "Compound")) +
+  geom_smooth(aes(y = compound_daily), formula = y ~ x)
 
 #sentiment
 ggplot(data=media_vader_df, aes(x=created_at, fill = screen_name)) +
@@ -210,12 +219,12 @@ ggplot(media_vader_df %>% arrange(compound) %>% mutate(X1 = factor(X1, levels = 
 
 ```{r Interactions}
 media_vader_df %>% select(favorite_count, retweet_count) %>% mutate(favorite_count + retweet_count)
-media_vader_df %>% mutate(created_at = as.Date(created_at)) %>%  group_by(created_at) %>% mutate(sum = sum(favorite_count + retweet_count)) 
- media_vader_df %>% mutate(created_at = as.Date(created_at)) %>%  group_by(created_at, screen_name) %>% mutate(retweet_daily = sum(retweet_count), favorite_daily = sum(favorite_count)) %>% ungroup()
 
-plot <- media_vader_df %>% mutate(created_at = as.Date(created_at)) %>%  group_by(created_at) %>% mutate(retweet_daily = sum(retweet_count), favorite_daily = sum(favorite_count), sum = sum(favorite_count + retweet_count)) %>% 
+plot <- media_vader_df %>% mutate(created_at = as.Date(created_at)) %>%  group_by(created_at) %>% mutate(retweet_daily = mean(retweet_count), favorite_daily = mean(favorite_count), total = mean(favorite_count + retweet_count)) %>% 
   ggplot(aes(created_at)) +
-  geom_ribbon(aes(ymin = 0, ymax = retweet_daily, y = sum, fill = "blue"))
+  geom_ribbon(aes(ymin = 0, ymax = total, fill = "Total")) +
+  geom_ribbon(aes(ymin = 0, ymax = favorite_daily, fill = "Favorites")) +
+  geom_ribbon(aes(ymin = 0, ymax = retweet_daily, fill = "Retweets"))
   
 ggplotly(plot)
 
