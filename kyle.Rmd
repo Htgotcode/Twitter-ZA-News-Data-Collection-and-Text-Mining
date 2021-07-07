@@ -7,7 +7,7 @@ What tweets got the most attention.
 frequency of tweets posted on a topic
 
 
-```{r}
+```{r SETUP}
 library(rtweet)
 library(ggplot2)
 library(tidyr)
@@ -155,7 +155,7 @@ tidy_media_tf_idf %>%
   labs(x = "tf-idf", y = NULL)
 ```
 
-By modelling bigrams and trigrams for our dataset gives us a better understanding of what topic is being discussed with each word. 
+By modelling bigrams and trigrams for our dataset gives us a better understanding of what topic is being discussed with each word. We can then also see which sentiments are incorrectly labeled. "not good" gives better context of a negative sentiment, rather than it being incorrectly identified as positive good.
 ```{r bigrams}
 #bigrams
 tidy_bigram_df <- media_agency_df %>% 
@@ -193,7 +193,7 @@ bigram_tf_idf %>%
 
 #weights and graphs
 bigram_graph <- bigram_counts %>%
-  filter(n > 40) %>%
+  filter(n > 100) %>%
   graph_from_data_frame()
 
 set.seed(1234)
@@ -202,37 +202,26 @@ ggraph(bigram_graph, layout = "fr") +
   geom_edge_link(aes(edge_alpha = n), show.legend = FALSE,
                  arrow = a, end_cap = circle(.07, 'inches')) +
   geom_node_point(color = "lightblue", size = 5) +
-  geom_node_text(aes(label = name), vjust = 1, hjust = 1) +
+  geom_node_text(aes(label = name), vjust = 1, hjust = 1, repel = TRUE) +
   theme_void()
 ```
 
 
 ```{r not words}
 #not words
-AFINN <- get_sentiments("afinn")
-not_words <- bigrams_separated %>%
-  filter(word1 == "not") %>%
-  inner_join(AFINN, by = c(word2 = "word")) %>%
-  count(word2, value, sort = TRUE)
-not_words %>%
-  mutate(contribution = n * value) %>%
-  arrange(desc(abs(contribution))) %>%
-  head(20) %>%
-  mutate(word2 = reorder(word2, contribution)) %>%
-  ggplot(aes(n * value, word2, fill = n * value > 0)) +
-  geom_col(show.legend = FALSE) +
-  labs(x = "Sentiment value * number of occurrences",
-       y = "Words preceded by \"not\"")
+vader_lexicon <- read_csv2("data_in/vader_lexicon.csv") %>% 
+  rename("word" = TOKEN, "value" = `MEAN-SENTIMENT-RATING`)
 
 negation_words <- c("not", "no", "never", "without")
 negated_words <- bigrams_separated %>%
   filter(word1 %in% negation_words) %>%
-  inner_join(AFINN, by = c(word2 = "word")) %>%
+  inner_join(vader_lexicon, by = c(word2 = "word")) %>%
+   mutate(value = as.double(value)) %>% 
   count(word1, word2, value, sort = TRUE)
 negated_words %>%
   mutate(contribution = n * value) %>%
   arrange(desc(abs(contribution))) %>%
-  head(20) %>%
+  head(50) %>%
   mutate(word2 = reorder(word2, contribution)) %>%
   ggplot(aes(n * value, word2, fill = n * value > 0)) +
   geom_col(show.legend = FALSE) + 
@@ -241,7 +230,7 @@ negated_words %>%
        y = "Words preceded by negation terms")
 ```
 
-
+Trigrams were modelled but were not necessary as bigrams provided enough information
 ```{r trigrams}
 #trigrams
 tidy_trigram_df <- media_agency_df %>%
@@ -278,6 +267,7 @@ tidy_trigram_df %>%
   labs(x = "tf-idf", y = NULL)
 
 ```
+
 
 ```{r Counting and correlating among sections}
 media_agency_section_words <- media_agency_df %>%
