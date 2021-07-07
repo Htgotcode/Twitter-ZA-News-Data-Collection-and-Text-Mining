@@ -61,16 +61,18 @@ media_agency_df <- media_agency_df[ , colSums(is.na(media_agency_df)) < nrow(med
 
 # Comparing Tweet Archives
 
-
+Some tweets fetched date further back. The 3200 tweet pull per user causes this. It tells us that agencies like News24 and SABC News Tweet more daily than Daily Maverick.
 ```{r}
 ggplot(media_agency_df, aes(x = created_at, fill = screen_name)) +
   geom_histogram(position = "identity", bins = 20, show.legend = FALSE) +
   facet_wrap(~screen_name, ncol = 1)
 ```
 
+We first clean the original text to remove links, punctuation, digits, links, @'s.
+Then we tokenize the Tweets and remove stop words from tidytext and our own stopword dictionary. We also use the "twitter" token to handle any left over @'s and URLS.
 ```{r Clean up}
 
-covid_dictionary <- c("herd", "immunity", "incubation", "job", "loss", "Kits", "lockdown", "mask", "N95", "outbreak", "pandemic", "quarantine", "recovery", "sanitiser", "transmission", "Underlying", "conditions", "Ventilators", "WHO", "xenophobia", "youTube", "zoonotic", "stay-at-home", "covid", "coronavirus", "hyrdoxychloroquine", "asymptomatic", "frontline", "virus", "self-isolation", "disinfectant", "shelter-in-place", "masks", "SARS-CoV-2", "ICU", "corona", "reopen", "distancing", "covering", "furlough", "tracer", "easing", "remdesivir", "mail-in", "hornet", "antibody", "in-person", "defund", "racism", "looting", "loot", "reopen", "two-metre", "pandemic", "looter", "distancing", "dexamethasone", "racial", "vaccine")
+covid_dictionary <- c("herd", "immunity", "incubation", "job", "loss", "Kits", "lockdown", "mask", "N95", "outbreak", "pandemic", "quarantine", "recovery", "sanitiser", "transmission", "Underlying", "conditions", "Ventilators", "WHO", "xenophobia", "youTube", "zoonotic", "stay-at-home", "covid", "coronavirus", "hyrdoxychloroquine", "asymptomatic", "frontline", "virus", "self-isolation", "disinfectant", "shelter-in-place", "masks", "SARS-CoV-2", "ICU", "corona", "reopen", "distancing", "covering", "furlough", "tracer", "easing", "remdesivir", "mail-in", "hornet", "antibody", "in-person", "defund", "racism", "looting", "loot", "reopen", "two-metre", "pandemic", "looter", "distancing", "dexamethasone", "racial", "vaccine", "curfew","johnssons", "astrazeneca", "hospitals", "social-distance", "social-distancing", "police", "regulations", "symptoms", "testing", "positive-tests", "negative-tests" , "confirmed-cases", "restrictions", "deaths", "infected", "recoveries", "level", "jobs", "unemployed", "doctors", "infections", "sanitise", "sanitiser", "sanitisation", "containment")
 
 #JUST tidy
 media_agency_df <- media_agency_df %>% 
@@ -80,81 +82,60 @@ media_agency_df <- media_agency_df %>%
          text = gsub("@\\w+", "", text),
          text = gsub("[[:punct:]]", "", text),
          text = gsub("[[:digit:]]", "", text),
-         text = gsub("http\\w+", "", text),
          text = gsub("[ \t]{2,}", "", text),
          text = gsub("^\\s+|\\s+$", "", text),
-         text = gsub("enca", "", text),
-         text = gsub("dstv", "", text),
-         text = gsub("sabcnews", "", text),
          text = gsub("&amp", "", text)) %>% 
   mutate(text = str_replace_all(text," "," "),
          text = str_replace_all(text,"RT @[a-z,A-Z]*: "," "),
          text = str_replace_all(text,"#[a-z,A-Z]*"," "),
-         text = str_replace_all(text,"@[a-z,A-Z]*"," ")) 
-  #filter(str_detect(text, fixed(covid_dictionary, ignore_case = TRUE))) 
-  
+         text = str_replace_all(text,"@[a-z,A-Z]*"," "))  
+#  filter(str_detect(text, fixed(covid_dictionary, ignore_case = TRUE))) 
+
+mystopwords <- tibble(word = c("sabcnews", "enca", "https", "dstv", "sabckzn", "maverick", "opinion", "opinionista", "dm", "scorpio", "anc", "south", "africa", "dstv403", "t.co", "itus", "rt", "amp", "tgifood", "mamelodi", "sundowns", "ofmagazineavailable", "casablanca", "oped", "newsdeck", "editorial", "newflash", "southafricanmorning", "newslink", "encas", "southafricatonight", "themiddayview", "thelead", "propertymatters", "ba", "ka", "ya", "ga", "wa", "le", "kwa", "morninglivesabc", "davis", "monday", "livezuma", "prix", "azerbaijan", "iss", "assassin", "preprison", "diaries", "encasis", "moyane", "encabusiness","withon", "boresetse", "encasspeaks", "buisana", "sponsoredthe", "jub", "liesl"))  
+
 #tidy df and unnest
 tidy_media_df <- media_agency_df %>% 
   #filter(str_detect(text, fixed(covid_dictionary, ignore_case = TRUE))) %>%
   filter(!str_detect(text, "^RT")) %>%
-  mutate(text = gsub(" ?(f|ht)tp(s?)://(.*)[.][a-z]+", " ", text)) %>%
   unnest_tokens(word, text, token = "tweets") %>% 
   filter(!word %in% stop_words$word,
+         !word %in% mystopwords$word,
          !word %in% str_remove_all(stop_words$word, "'"),
-         str_detect(word, "[a-z]"),
-         !(word =="sabcnews" |
-             word =="enca" |
-             word =="https" |
-             word =="dstv" |
-             word =="sabckzn" |
-             word =="maverick" |
-             word =="opinion" |
-             word =="opinionista" |
-             word =="dm" |
-             word =="scorpio" |
-             word =="anc" |
-             word =="south" |
-             word =="africa" |
-             word =="dstv403" |
-             word =="t.co" |
-             word =="itus" |
-             word =="rt" |
-             word =="amp"))
+         str_detect(word, "[a-z]"))
 
 ```
 
-```{r tf-idf}
+From our tidyed Tweet dataset, we look for the top words that appear. This will give us a good idea of what topics are being discussed the most. We find that COVID-19 has been the main topic of discussion. President appears second as President Ramaphosa of South Africa usually adresses the nation regarding COVID-19 information. Additionally, Zuma also appears as he is mentioned as "former president Zuma" in most articles. Zuma appears more as his recent court avoidance and sentencing is being Tweeted. General words surrounding the COVID-19 topic as it is still the main pressure on the country, espicially involving Gauteng's rise in infections. 
+```{r top words}
 #top words
 top_words <- tidy_media_df %>% 
   anti_join(stop_words) %>% 
   count(word) %>% 
   arrange(desc(n))
-# top_words %>% 
-#   slice(1:20) %>% 
-#   ggplot(aes(reorder(word, -n), n, fill = word)) +
-#   geom_bar(stat="identity") +
-#   theme_minimal() +
-#   theme(
-#     axis.text.x = element_text(angle = 60, hjust = 1, size = 13),
-#     plot.title = element_text(hjust = 0.5, size = 18)
-#     ) +
-#   ylab("Frequency") +
-#   xlab ("") +
-#   ggtitle("Most frequent media agency tweets") +
-#   guides(fill=FALSE)
+top_words %>%
+  slice(1:20) %>%
+  ggplot(aes(reorder(word, -n), n, fill = word)) +
+  geom_bar(stat="identity") +
+  theme_minimal() +
+  theme(
+    axis.text.x = element_text(angle = 60, hjust = 1, size = 13),
+    plot.title = element_text(hjust = 0.5, size = 18)
+    ) +
+  ylab("Frequency") +
+  xlab ("") +
+  ggtitle("Most frequent media agency tweets") +
+  guides(fill=FALSE)
+```
 
+gh
+```{r tf-idf frequency per agency}
 #tf-idf
 tidy_media_tf_idf <- tidy_media_df %>% 
   select(screen_name, word) %>% 
   count(word, screen_name) %>% 
   bind_tf_idf(word, screen_name, n) 
-#top_tfidf
-# tidy_media_tf_idf %>% 
-#   slice(-(1:582)) %>% 
-#   arrange(desc(tf_idf))
 
-
-#calculate a frequency for each person and word
+#calculate a frequency for each agency and word
 frequency <- tidy_media_tf_idf %>% 
   group_by(screen_name) %>% 
   count(word, sort = TRUE) %>% 
@@ -174,15 +155,14 @@ tidy_media_tf_idf %>%
   labs(x = "tf-idf", y = NULL)
 ```
 
-```{r n-grams}
+By modelling bigrams and trigrams for our dataset gives us a better understanding of what topic is being discussed with each word. 
+```{r bigrams}
 #bigrams
 tidy_bigram_df <- media_agency_df %>% 
   #filter(str_detect(text, fixed(covid_dictionary, ignore_case = TRUE))) %>%
   filter(!str_detect(text, "^RT")) %>%
   mutate(text = gsub(" ?(f|ht)tp(s?)://(.*)[.][a-z]+", " ", text)) %>%
-  unnest_tokens(bigram, text, token = "ngrams", n = 2)
-
-bigrams_separated <- tidy_bigram_df %>%
+  unnest_tokens(bigram, text, token = "ngrams", n = 2) %>% 
   separate(bigram, c("word1", "word2"), sep = " ")
 
 bigrams_filtered <- bigrams_separated %>%
@@ -211,10 +191,6 @@ bigram_tf_idf %>%
   facet_wrap(~screen_name, ncol = 2, scales = "free") +
   labs(x = "tf-idf", y = NULL)
 
-bigrams_separated %>%
-  filter(word1 == "not") %>%
-  count(word1, word2, sort = TRUE)
-
 #weights and graphs
 bigram_graph <- bigram_counts %>%
   filter(n > 40) %>%
@@ -228,7 +204,10 @@ ggraph(bigram_graph, layout = "fr") +
   geom_node_point(color = "lightblue", size = 5) +
   geom_node_text(aes(label = name), vjust = 1, hjust = 1) +
   theme_void()
+```
 
+
+```{r not words}
 #not words
 AFINN <- get_sentiments("afinn")
 not_words <- bigrams_separated %>%
@@ -260,15 +239,16 @@ negated_words %>%
   facet_wrap(~word1) +
   labs(x = "Sentiment value * # number of occurrences",
        y = "Words preceded by negation terms")
+```
 
+
+```{r trigrams}
 #trigrams
 tidy_trigram_df <- media_agency_df %>%
   filter(!str_detect(text, "^RT")) %>%
   mutate(text = gsub(" ?(f|ht)tp(s?)://(.*)[.][a-z]+", " ", text)) %>%
-  unnest_tokens(trigram, text, token = "ngrams", n = 3) 
-
-trigrams_separated <- tidy_trigram_df %>%
-separate(trigram, c("word1", "word2", "word3"), sep = " ")
+  unnest_tokens(trigram, text, token = "ngrams", n = 3) %>%
+  separate(trigram, c("word1", "word2", "word3"), sep = " ")
 
 trigrams_filtered <- trigrams_separated %>%
   filter(!word1 %in% stop_words$word) %>%
