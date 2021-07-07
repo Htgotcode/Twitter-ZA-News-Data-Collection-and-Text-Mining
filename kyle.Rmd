@@ -206,28 +206,30 @@ ggraph(bigram_graph, layout = "fr") +
   theme_void()
 ```
 
-
+We give more weight to words that appear more often with the incorrect sentiment. We can now remove them from our dataset to get a more accurate sentiment.
 ```{r not words}
-#not words
+#vader lexicon imported from VADER GitHub 
 vader_lexicon <- read_csv2("data_in/vader_lexicon.csv") %>% 
   rename("word" = TOKEN, "value" = `MEAN-SENTIMENT-RATING`)
 
-negation_words <- c("not", "no", "never", "without")
+#common negation words
+negation_words <- c("not", "no", "never", "without", "no", "not", "none", "no one", "nobody", "nothing", "neither", "nowhere", "never", "doesn’t", "isn’t", "wasn’t", "shouldn’t", "wouldn’t", "couldn’t", "won’t", "can’t", "don’t")
 negated_words <- bigrams_separated %>%
-  filter(word1 %in% negation_words) %>%
+  filter(word1 %in% fixed(negation_words, ignore_case = TRUE)) %>%
   inner_join(vader_lexicon, by = c(word2 = "word")) %>%
-   mutate(value = as.double(value)) %>% 
-  count(word1, word2, value, sort = TRUE)
-negated_words %>%
+  mutate(value = as.double(value)) %>% 
+  count(word1, word2, value, sort = TRUE) %>% 
   mutate(contribution = n * value) %>%
   arrange(desc(abs(contribution))) %>%
-  head(50) %>%
-  mutate(word2 = reorder(word2, contribution)) %>%
+  mutate(word2 = reorder(word2, contribution))
+negated_words %>%
+  head(40) %>% 
   ggplot(aes(n * value, word2, fill = n * value > 0)) +
   geom_col(show.legend = FALSE) + 
-  facet_wrap(~word1) +
+  facet_wrap(~word1,scales = "free_y") +
   labs(x = "Sentiment value * # number of occurrences",
        y = "Words preceded by negation terms")
+
 ```
 
 Trigrams were modelled but were not necessary as bigrams provided enough information
@@ -438,15 +440,6 @@ result <- FindTopicsNumber(
   mc.cores = 2L,
   verbose = TRUE
 )
-
-
-##  fit models... done.
-##  calculate metrics:
-##   Griffiths2004... done.
-##   CaoJuan2009... done.
-##   Arun2010... done.
-##   Deveaud2014... done.
-
 
 FindTopicsNumber_plot(result)
 ```
