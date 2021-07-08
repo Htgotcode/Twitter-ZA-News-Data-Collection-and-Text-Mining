@@ -281,28 +281,17 @@ library(wordcloud)
 Setting up Reddit scraper
 
 ```{r}
-# A script to scrape the top comments from the top posts of Reddit or a specified 
-# subreddit and create a word frequency table from them. It also can plot a 
-# word cloud from the most common words on the page. 
-
-# Notes:
-#
-# This won't work on NSFW subreddits that require you to click that you're 18 
-# or older. I haven't looked at how to code that yet.
+SA_Data<- redditScrape(subred = "southafrica",
+             time = "This Week",
+             plotCloud = TRUE,
+             saveText = FALSE,
+             myDirectory = "~/Documents/GitHub/Twitter-ZA-News-Data-Collection-and-Text-Mining/data_in")
+```
 
 
-# Overview of the function:  
-# 1. Get the selected page (front or subreddit)
-# 2. Build the links to all of the comments
-# 3. Scrape each comments page (this step can take a while, 10 to 40 seconds)
-# 4. Clean it up
-# 5. Get the word frequency 
-# 6. Plot a word cloud
-# 7. Return a word frequency table
 
-
+```{r}
 redditScrape <- function(subred = c('nameOfSubred', 'allTop'), time = c('day', 'week', 'month', 'year'), plotCloud = TRUE, saveText = FALSE, myDirectory = "/choose/a/directory") {
-
 
 
 	#######################################################
@@ -316,7 +305,7 @@ redditScrape <- function(subred = c('nameOfSubred', 'allTop'), time = c('day', '
 	# if more than one time, apply function to each time frame separately
 	if (length(time) > 1) { 
 	  return(lapply(time, function(i) 
-	    redditScrape(subred='r/southafrica', time='week', saveText=FALSE, myDirectory="~/Documents/GitHub/Twitter-ZA-News-Data-Collection-and-Text-Mining/data_in")))
+	    redditScrape(subred=subred, time=i, saveText=saveText, myDirectory=myDirectory)))
 	}
 	
 
@@ -324,9 +313,9 @@ redditScrape <- function(subred = c('nameOfSubred', 'allTop'), time = c('day', '
 	# 1. Make the url, get the page. 
 
 	if (subred == 'allTop') {
-		url <- paste('https://www.reddit.com/r/southafrica/top/?f=flair_name%3A%22COVID-19%22&t=week', time, sep = "/")
+		url <- paste('http://www.reddit.com/top/?sort=top&t=', time, sep = "")
 	} else {	
-		url <- paste("http://www.reddit.com/r/", subred, "/top/?sort=top&t=", time, sep = "/")
+		url <- paste("http://www.reddit.com/r/", subred, "/top/?sort=top&t=", time, sep = "")
 	}
 	
 	doc <- htmlParse(url)
@@ -334,7 +323,7 @@ redditScrape <- function(subred = c('nameOfSubred', 'allTop'), time = c('day', '
 	#######################################################
 	# 2. Get the links that go to comment sections of the posts
 
-	links <- xpathSApply(doc, "comments/of6biy/governments_vaccine_rollout_programme/")
+	links <- xpathSApply(doc, "//a/@href")
 	comments <- grep("comments", links)
 	comLinks <- links[comments]
 	comments <- grep('reddit.com', comLinks, fixed=TRUE)
@@ -452,6 +441,145 @@ redditScrape <- function(subred = c('nameOfSubred', 'allTop'), time = c('day', '
 	textTable
 }
 ```
+Trying PushShift API
 ```{r}
+#devtools::install_github("https://github.com/nathancunn/pushshiftR")
+
+getPushshiftData(postType = "comment",
+                 size = 1000,
+                 after = "1546300800",
+                 subreddit = "southafrica",
+                 nest_level = 1)
+```
+Push shift function
+```{r}
+#' Gets the pushshift data
+#'
+#' @param postType One of `submission` or `comment`
+#' @param title A string to search for in post titles
+#' @param size Number of results to return, maximum is 1000
+#' @param q A query to search for
+#' @param after Only search for posts made after this data, specified as a UNIX epoch time
+#' @param before As `after`, but before
+#' @param subreddit Only return posts made in this subreddit
+#' @param nest_level How deep to search? `nest_level = 1` returns only top-level comments
+#' @return A tibble of reddit submissions
+#' @export
+#' @importFrom jsonlite fromJSON
+#' @importFrom magrittr %>%
+#' @importFrom dplyr select filter
+#' @import tibble
+getPushshiftData <- function(postType, ...) {
+  if(postType == "submission") {
+  getPushshiftURL(postType, ...) %>%
+    jsonlite::fromJSON() %>%
+    .$data %>%
+    jsonlite::flatten(recursive = TRUE) %>%
+    select(author, title, selftext, created_utc, id, num_comments, score, subreddit) %>%
+    as_tibble()
+  } else {
+    getPushshiftURL(postType, ...) %>%
+      jsonlite::fromJSON() %>%
+      .$data %>%
+      jsonlite::flatten(recursive = TRUE) %>%
+      select(author, body, parent_id, score, created_utc, subreddit) %>%
+      as_tibble()
+  }
+}
+
+#' Gets the pushshift URL
+#'
+#' @param postType One of `submission` or `comment`
+#' @param title A string to search for in post titles
+#' @param size Number of results to return, maximum is 1000
+#' @param q A query to search for
+#' @param after Only search for posts made after this data, specified as a UNIX epoch time
+#' @param before As `after`, but before
+#' @param subreddit Only return posts made in this subreddit
+#' @param nest_level How deep to search? `nest_level = 1` returns only top-level comments
+#' @return A URL
+#' @export
+#' @importFrom jsonlite fromJSON
+#' @importFrom magrittr %>%
+getPushshiftURL <- function(postType = "submission",
+                             title = NULL,
+                             size = NULL,
+                             q = NULL,
+                             after = NULL,
+                             before = NULL,
+                             subreddit = NULL,
+                             nest_level = NULL) {
+  if(postType %not_in% c("submission", "comment")) {
+    stop("postType must be one of `submission` or `comment`")
+  }
+  return(paste("https://api.pushshift.io/reddit/search/",
+        postType,
+        "?",
+        ifelse(is.null(title), "", sprintf("&title=%s", title)),
+        ifelse(is.null(size), "", sprintf("&size=%s", size)),
+        ifelse(is.null(q), "", sprintf("&q=%s", q)),
+        ifelse(is.null(after), "", sprintf("&after=%s", after)),
+        ifelse(is.null(before), "", sprintf("&before=%s", before)),
+        ifelse(is.null(subreddit), "", sprintf("&subreddit=%s", subreddit)),
+        ifelse(is.null(nest_level), "", sprintf("&nest_level=%s", nest_level)),
+        sep = ""))
+}
+
+#' Repeats getPushshiftData until desired period covered
+#' @param postType One of `submission` or `comment`
+#' @param title A string to search for in post titles
+#' @param size Number of results to return, maximum is 1000
+#' @param q A query to search for
+#' @param after Only search for posts made after this data, specified as a UNIX epoch time
+#' @param before As `after`, but before
+#' @param subreddit Only return posts made in this subreddit
+#' @param nest_level How deep to search? `nest_level = 1` returns only top-level comments
+#' @param delay Number of seconds to wait between queries to avoid stressing out the Pushshift server (limit is somewhere around 200 queries per minute)
+#' @return A tibble of the requested data
+#' @export
+#' @importFrom jsonlite fromJSON
+#' @importFrom magrittr %>%
+#' @importFrom dplyr last
+#' @importFrom tibble add_case
+getPushshiftDataRecursive <- function(postType = "submission",
+                                      title = NULL,
+                                      size = NULL,
+                                      q = NULL,
+                                      after = NULL,
+                                      before = NULL,
+                                      subreddit = NULL,
+                                      nest_level = NULL,
+                                      delay = 0) {
+  tmp <- getPushshiftData(postType,
+                          title,
+                          size,
+                          q,
+                          after,
+                          before,
+                          subreddit,
+                          nest_level)
+  out <- tmp %>% filter(FALSE)
+  on.exit(return(out), add = TRUE)
+  after <- last(tmp$created_utc)
+  while(nrow(tmp) > 0) {
+    print(
+    sprintf("%d %ss fetched, last date fetched: %s",
+            nrow(tmp),
+            postType,
+            as.Date(as.POSIXct(as.numeric(after), origin = "1970-01-01"))))
+    out <- rbind(out, tmp)
+    after <- last(tmp$created_utc)
+    tmp <- getPushshiftData(postType,
+                            title,
+                            size,
+                            q,
+                            after,
+                            before,
+                            subreddit,
+                            nest_level)
+    Sys.sleep(delay)
+  }
+}
+
 ```
 
