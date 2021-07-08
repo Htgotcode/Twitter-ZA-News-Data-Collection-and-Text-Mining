@@ -58,7 +58,7 @@ Importing data
 ```{r}
 media_agency_df <- read_csv("data_in/media_agency_tweets.csv")
 media_agency_df <- media_agency_df[ , colSums(is.na(media_agency_df)) < nrow(media_agency_df)]
-
+media_agency_df <- media_agency_df %>% mutate("X1" = row_number())
 ```
 
 Wrangeling and cleaning data
@@ -110,9 +110,9 @@ agencies %>%
 Seniment Analysis with SentimentR
 ```{r}
 
-mytext<- media_agency_df%>%
-  select(text) 
-mytext <- get_sentences(mytext)
+mytext<- media_agency_df 
+
+mytext <- get_sentences(mytext$text)
 sr_data <-sentiment(mytext)
 #write_csv(sr_data,"data_in/sentimentr_data.csv")
 ```
@@ -245,5 +245,341 @@ covid_dictionary <- c("herd", "immunity", "incubation", "job", "loss", "Kits", "
                       "deaths","infected","recoveries","level","jobs","unemployed",
                       "doctors","infections","sanitise","sanitiser","sanitisation",
                       "containment")
+<<<<<<< Updated upstream
+```
+
+Twitter Data Collection
+```{r}
+api_key<-"kiTPElkmRXH1dlkWZvg8NKXnv"
+api_secret<- "kb1m6ptvfNk0aEr32CPb1StTP6vKWkyARzhIRmlzIWD5jcDMYR"
+bearer_token<- "AAAAAAAAAAAAAAAAAAAAAHeuRQEAAAAAFG%2FdNaqw1dohx8odwaOo4If3gjo%3DZhPIX72ocncocrVXgMol6W6wluhoQZJpcc0wOBqIPHxk8jpTdO"
+access_token<- "1409212644880494599-4COmIfqJ2suVE9Ig30xt4sZ8eXeGEo"
+access_token_secret <- "0JvXGlTUtAvTX7UWqhTG7wDpneq6zcpkuxTCq6rUHsCrx"
+
+origop <- options("httr_oauth_cache")
+options(httr_oauth_cache = TRUE)
+
+token <- create_token(
+  app = "FrancoisTwitterDataApp",
+  consumer_key = api_key,
+  consumer_secret = api_secret,
+  access_token = access_token,
+  access_secret = access_token_secret)
+```
+
+```{r}
+install.packages("XML")
+install.packages("RCurl")
+install.packages("RColorBrewer")
+install.packages("wordcloud")
+
+library(XML)
+library(RCurl)
+library(RColorBrewer)
+library(wordcloud)
+```
+Setting up Reddit scraper
+
+```{r}
+SA_Data<- redditScrape(subred = "southafrica",
+             time = "This Week",
+             plotCloud = TRUE,
+             saveText = FALSE,
+             myDirectory = "~/Documents/GitHub/Twitter-ZA-News-Data-Collection-and-Text-Mining/data_in")
+```
+
+
+
+```{r}
+redditScrape <- function(subred = c('nameOfSubred', 'allTop'), time = c('day', 'week', 'month', 'year'), plotCloud = TRUE, saveText = FALSE, myDirectory = "/choose/a/directory") {
+
+
+	#######################################################
+	# 0. Load the required packages.  And check a few items
+	
+	require(XML)
+	require(RCurl)
+	require(RColorBrewer) 
+	require(wordcloud)
+	
+	# if more than one time, apply function to each time frame separately
+	if (length(time) > 1) { 
+	  return(lapply(time, function(i) 
+	    redditScrape(subred=subred, time=i, saveText=saveText, myDirectory=myDirectory)))
+	}
+	
+
+	#######################################################
+	# 1. Make the url, get the page. 
+
+	if (subred == 'allTop') {
+		url <- paste('http://www.reddit.com/top/?sort=top&t=', time, sep = "")
+	} else {	
+		url <- paste("http://www.reddit.com/r/", subred, "/top/?sort=top&t=", time, sep = "")
+	}
+	
+	doc <- htmlParse(url)
+
+	#######################################################
+	# 2. Get the links that go to comment sections of the posts
+
+	links <- xpathSApply(doc, "//a/@href")
+	comments <- grep("comments", links)
+	comLinks <- links[comments]
+	comments <- grep('reddit.com', comLinks, fixed=TRUE)
+	comLinks <- comLinks[comments]
+
+
+	#######################################################
+	#  3. Scrape the pages
+	#  This will scrape a page and put it in to 
+	#  an R list object 
+
+	textList <- as.list(rep(as.character(""), length(comLinks))) 
+	docs <- getURL(comLinks)
+	for (i in 1:length(docs)) {
+		textList[[i]] <- htmlParse(docs[i], asText = TRUE)
+		textList[[i]] <- xpathSApply(textList[[i]], "//p", xmlValue)
+	}
+		
+	#######################################################
+	#  4. Clean up the text.
+
+	# Remove the submitted lines and lines at the end of each page
+	for (i in 1:length(textList)) {
+		submitLine <- grep("submitted [0-9]", textList[[i]]) 
+		textList[[i]] <- textList[[i]][{(submitLine[1] + 1):(length(textList[[i]])-10)}]
+	}
+	
+	# Removing lines capturing user and points, etc.
+	# Yes, there could be fewer grep calls, but this made it 
+	# easier to keep track of what was going on.
+	textList <- lapply(textList, function(i){
+            		grep('points 1 minute ago', i) -> nameLines1
+            		grep('points [0-9] minutes ago', i) -> nameLines2
+            		grep('points [0-9][0-9] minutes ago', i) -> nameLines3
+            		grep("points 1 hour ago", i) -> nameLines4
+            		grep("points [0-9] hours ago", i) -> nameLines5
+            		grep("points [0-9][0-9] hours ago", i) -> nameLines6
+            		grep('points 1 day ago', i) -> nameLines7
+            		grep('points [0-9] days ago', i) -> nameLines8
+            		grep('points [0-9][0-9] days ago', i) -> nameLines9
+            		grep('points 1 month ago', i) -> nameLines10
+            		grep('points [0-9] months ago', i) -> nameLines11
+            		grep('points [0-9][0-9] months ago', i) -> nameLines12
+            		allLines <- c(nameLines1, nameLines2, nameLines3, nameLines4, 
+            			nameLines5, nameLines6, nameLines7, nameLines8, nameLines9, 
+            			nameLines10, nameLines11, nameLines12)
+            		temp <- i[-allLines]
+            		temp <- temp[temp!=""]
+            		tolower(temp)
+            	  })
+  
+	# Let's simplify our list. Could have been done earlier, but so it goes. 
+	allText <- unlist(textList)
+
+	# Remove the punctuation, links, etc.
+	allText <- gsub("https?://[[:alnum:][:punct:]]+", "", allText)
+	allText <- gsub("[,.!?\"]", "", allText)
+	allText <- strsplit(allText, "\\W+", perl=TRUE)
+	allText <- unlist(allText)
+
+	# Remove frequent words and orphans of contractions (that sounds 
+	# sadder than it is).
+	frequentWords <- c("the", "be", "been", "to", "of", "and", "a", "in", 
+	"that", "have", "i", "it", "for", "not", "on", "with", "he", "as", "you", 
+	"do", "at", "this", "but", "his", "by", "from", "they", "we", "say", "her", 
+	"she", "or", "an", "will", "my", "one", "all", "would", "there", "their", 
+	"what", "so", "up", "out", "if", "about", "who", "get", "which", "go", 
+	"me", "when", "make", "can", "like", "time", "no", "just", "him", "know", 
+	"take", "people", "into", "year", "your", "good", "some", "could", "them", 
+	"see", "other", "than", "then", "now", "look", "only", "come", "its", 
+	"over", "think", "also", "back", "after", "use", "two", "how", "our", 
+	"work", "first", "well", "way", "even", "new", "want", "because", "any", 
+	"these", "give", "day", "most", "us", 'is', 'are', 'was', 'were', 'i', 's', 
+	'was', 'don', 'aren', 'points1', 'point', 't', 'm', 'points0', '10', '1', 
+	're', 'll', 'd', '2', '3', '4', '5', '6', '7', '8', '9', 'doesn','d', 've', 
+	'r', 'has', 'had', 'been', 'being', '0', 'more', 'really', 'isn', 'very', 
+	'am', 'didn', 'wouldn', '', 'points', 'point', 'months', 'ago', 'deleted', 
+	'much')
+
+	for (i in 1:length(frequentWords)) { 
+		allText <- allText[allText!=frequentWords[i]]
+	}
+
+	# Save the file to your drive. This way you can drop it into
+	# Wordle.net or use it other places. 
+	if (saveText == TRUE) {
+		curWD <- getwd() 
+		setwd(myDirectory)
+		filename <- paste("Reddit Comments Postscrub ", subred, " ", time, " ", 
+			Sys.time(),".txt", sep = "") 
+		write.table(allText, file = filename, row.names=F, col.names=F, append=T)
+		# save(allText, file = filename)
+		textListBackup <- textList
+		setwd(curWD)
+	}
+
+	#######################################################
+	#  5. Word frequency table
+
+	textTable <- table(allText)
+	textTable <- sort(textTable, decreasing = TRUE)
+
+	#######################################################
+	#  6. Plot word cloud
+
+	if (plotCloud == TRUE) {
+		# This is a nice option.  Just use a portion of the 0-1 for color
+		rainbow(30,s=.8,v=.6,start=.5,end=1,alpha=1) -> pal
+		wordcloud(names(textTable[1:200]), textTable[1:200], scale = c(4,.5), max.words = 200, colors = pal)
+	}
+
+	#######################################################
+	#  7. Return the text table
+
+	textTable
+}
+```
+Trying PushShift API
+```{r}
+devtools::install_github("https://github.com/nathancunn/pushshiftR")
+
+getPushshiftData(postType = "comment",
+                 size = 1000,
+                 after = "1546300800",
+                 subreddit = "southafrica",
+                 nest_level = 1)
+```
+Push shift function
+```{r}
+#' Gets the pushshift data
+#'
+#' @param postType One of `submission` or `comment`
+#' @param title A string to search for in post titles
+#' @param size Number of results to return, maximum is 1000
+#' @param q A query to search for
+#' @param after Only search for posts made after this data, specified as a UNIX epoch time
+#' @param before As `after`, but before
+#' @param subreddit Only return posts made in this subreddit
+#' @param nest_level How deep to search? `nest_level = 1` returns only top-level comments
+#' @return A tibble of reddit submissions
+#' @export
+#' @importFrom jsonlite fromJSON
+#' @importFrom magrittr %>%
+#' @importFrom dplyr select filter
+#' @import tibble
+getPushshiftData <- function(postType, ...) {
+  if(postType == "submission") {
+  getPushshiftURL(postType, ...) %>%
+    jsonlite::fromJSON() %>%
+    .$data %>%
+    jsonlite::flatten(recursive = TRUE) %>%
+    select(author, title, selftext, created_utc, id, num_comments, score, subreddit) %>%
+    as_tibble()
+  } else {
+    getPushshiftURL(postType, ...) %>%
+      jsonlite::fromJSON() %>%
+      .$data %>%
+      jsonlite::flatten(recursive = TRUE) %>%
+      select(author, body, parent_id, score, created_utc, subreddit) %>%
+      as_tibble()
+  }
+}
+
+#' Gets the pushshift URL
+#'
+#' @param postType One of `submission` or `comment`
+#' @param title A string to search for in post titles
+#' @param size Number of results to return, maximum is 1000
+#' @param q A query to search for
+#' @param after Only search for posts made after this data, specified as a UNIX epoch time
+#' @param before As `after`, but before
+#' @param subreddit Only return posts made in this subreddit
+#' @param nest_level How deep to search? `nest_level = 1` returns only top-level comments
+#' @return A URL
+#' @export
+#' @importFrom jsonlite fromJSON
+#' @importFrom magrittr %>%
+getPushshiftURL <- function(postType = "submission",
+                             title = NULL,
+                             size = NULL,
+                             q = NULL,
+                             after = NULL,
+                             before = NULL,
+                             subreddit = NULL,
+                             nest_level = NULL) {
+  if(postType %not_in% c("submission", "comment")) {
+    stop("postType must be one of `submission` or `comment`")
+  }
+  return(paste("https://api.pushshift.io/reddit/search/",
+        postType,
+        "?",
+        ifelse(is.null(title), "", sprintf("&title=%s", title)),
+        ifelse(is.null(size), "", sprintf("&size=%s", size)),
+        ifelse(is.null(q), "", sprintf("&q=%s", q)),
+        ifelse(is.null(after), "", sprintf("&after=%s", after)),
+        ifelse(is.null(before), "", sprintf("&before=%s", before)),
+        ifelse(is.null(subreddit), "", sprintf("&subreddit=%s", subreddit)),
+        ifelse(is.null(nest_level), "", sprintf("&nest_level=%s", nest_level)),
+        sep = ""))
+}
+
+#' Repeats getPushshiftData until desired period covered
+#' @param postType One of `submission` or `comment`
+#' @param title A string to search for in post titles
+#' @param size Number of results to return, maximum is 1000
+#' @param q A query to search for
+#' @param after Only search for posts made after this data, specified as a UNIX epoch time
+#' @param before As `after`, but before
+#' @param subreddit Only return posts made in this subreddit
+#' @param nest_level How deep to search? `nest_level = 1` returns only top-level comments
+#' @param delay Number of seconds to wait between queries to avoid stressing out the Pushshift server (limit is somewhere around 200 queries per minute)
+#' @return A tibble of the requested data
+#' @export
+#' @importFrom jsonlite fromJSON
+#' @importFrom magrittr %>%
+#' @importFrom dplyr last
+#' @importFrom tibble add_case
+getPushshiftDataRecursive <- function(postType = "submission",
+                                      title = NULL,
+                                      size = NULL,
+                                      q = NULL,
+                                      after = NULL,
+                                      before = NULL,
+                                      subreddit = NULL,
+                                      nest_level = NULL,
+                                      delay = 0) {
+  tmp <- getPushshiftData(postType,
+                          title,
+                          size,
+                          q,
+                          after,
+                          before,
+                          subreddit,
+                          nest_level)
+  out <- tmp %>% filter(FALSE)
+  on.exit(return(out), add = TRUE)
+  after <- last(tmp$created_utc)
+  while(nrow(tmp) > 0) {
+    print(
+    sprintf("%d %ss fetched, last date fetched: %s",
+            nrow(tmp),
+            postType,
+            as.Date(as.POSIXct(as.numeric(after), origin = "1970-01-01"))))
+    out <- rbind(out, tmp)
+    after <- last(tmp$created_utc)
+    tmp <- getPushshiftData(postType,
+                            title,
+                            size,
+                            q,
+                            after,
+                            before,
+                            subreddit,
+                            nest_level)
+    Sys.sleep(delay)
+  }
+}
+
 ```
 
