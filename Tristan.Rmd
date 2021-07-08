@@ -1,0 +1,179 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+```{r}
+library(rtweet)
+library(ggplot2)
+library(tidyr)
+library(dplyr)
+library(tidytext)
+library(stringr)
+library(scales)
+library(readr)
+library(lubridate)
+library(vader)
+library(topicmodels)
+library(quanteda)
+library(lubridate)
+library(zoo)
+library(plotly)
+library(forcats)
+```
+Read in:
+```{r}
+media_agency_df <- read_csv("data_in/media_agency_tweets.csv")
+```
+Clean up:
+```{r Clean up}
+
+covid_dictionary <- c("herd", "immunity", "incubation", "job", "loss", "Kits", "lockdown", "mask", "N95", "outbreak", "pandemic", "quarantine", "recovery", "sanitiser", "transmission", "Underlying", "conditions", "Ventilators", "WHO", "xenophobia", "youTube", "zoonotic", "stay-at-home", "covid", "coronavirus", "hyrdoxychloroquine", "asymptomatic", "frontline", "virus", "self-isolation", "disinfectant", "shelter-in-place", "masks", "SARS-CoV-2", "ICU", "corona", "reopen", "distancing", "covering", "furlough", "tracer", "easing", "remdesivir", "mail-in", "hornet", "antibody", "in-person", "defund", "racism", "looting", "loot", "reopen", "two-metre", "pandemic", "looter", "distancing", "dexamethasone", "racial", "vaccine")
+
+#JUST tidy
+media_agency_df <- media_agency_df %>% 
+  mutate(text = gsub("?(f|ht)tp(s?)://(.*)[.][a-z]+", "", text),
+         text = gsub("&amp", "", text),
+         text = gsub("(RT|via)((?:\\b\\W*@\\w+)+)", "", text),
+         text = gsub("@\\w+", "", text),
+         text = gsub("[[:punct:]]", "", text),
+         text = gsub("[[:digit:]]", "", text),
+         text = gsub("http\\w+", "", text),
+         text = gsub("[ \t]{2,}", "", text),
+         text = gsub("^\\s+|\\s+$", "", text),
+         text = gsub("enca", "", text),
+         text = gsub("dstv", "", text),
+         text = gsub("sabcnews", "", text),
+         text = gsub("&amp", "", text)) %>% 
+  mutate(text = str_replace_all(text," "," "),
+         text = str_replace_all(text,"RT @[a-z,A-Z]*: "," "),
+         text = str_replace_all(text,"#[a-z,A-Z]*"," "),
+         text = str_replace_all(text,"@[a-z,A-Z]*"," ")) 
+  #filter(str_detect(text, fixed(covid_dictionary, ignore_case = TRUE))) 
+
+mystopwords <- tibble(word = c("sabcnews", "enca", "https", "dstv", "sabckzn", "maverick", "opinion", "opinionista", "dm", "scorpio", "anc", "south", "africa", "dstv403", "t.co", "itus", "rt", "amp", "tgifood", "mamelodi", "sundowns", "ofmagazineavailable", "casablanca", "oped", "newsdeck", "editorial", "newflash", "southafricanmorning", "newslink", "encas", "southafricatonight", "themiddayview", "thelead", "propertymatters", "ba", "ka", "ya", "ga", "wa", "le", "kwa", "morninglivesabc", "davis", "monday", "livezuma", "prix", "azerbaijan", "iss", "assassin", "preprison", "diaries", "encasis", "moyane", "encabusiness","withon", "boresetse", "encasspeaks", "buisana", "sponsoredthe", "jub", "liesl"))  
+
+#tidy df and unnest
+tidy_media_df <- media_agency_df %>% 
+  #filter(str_detect(text, fixed(covid_dictionary, ignore_case = TRUE))) %>%
+  filter(!str_detect(text, "^RT")) %>%
+  mutate(text = gsub(" ?(f|ht)tp(s?)://(.*)[.][a-z]+", " ", text)) %>%
+  unnest_tokens(word, text, token = "tweets") %>% 
+  filter(!word %in% stop_words$word,
+         !word %in% mystopwords$word,
+         !word %in% str_remove_all(stop_words$word, "'"),
+         str_detect(word, "[a-z]"))
+
+```
+tf-idf:
+```{r tf-idf}
+#top words
+
+top_words <- tidy_media_df %>% 
+  anti_join(stop_words) %>% 
+  count(word) %>% 
+  arrange(desc(n))
+# top_words %>% 
+#   slice(1:20) %>% 
+#   ggplot(aes(reorder(word, -n), n, fill = word)) +
+#   geom_bar(stat="identity") +
+#   theme_minimal() +
+#   theme(
+#     axis.text.x = element_text(angle = 60, hjust = 1, size = 13),
+#     plot.title = element_text(hjust = 0.5, size = 18)
+#     ) +
+#   ylab("Frequency") +
+#   xlab ("") +
+#   ggtitle("Most frequent media agency tweets") +
+#   guides(fill=FALSE)
+
+#tf-idf
+tidy_media_tf_idf <- tidy_media_df %>% 
+  select(screen_name, word) %>% 
+  count(word, screen_name) %>% 
+  bind_tf_idf(word, screen_name, n) 
+#top_tfidf
+# tidy_media_tf_idf %>% 
+#   slice(-(1:582)) %>% 
+#   arrange(desc(tf_idf))
+
+
+#calculate a frequency for each person and word
+frequency <- tidy_media_tf_idf %>% 
+  group_by(screen_name) %>% 
+  count(word, sort = TRUE) %>% 
+  left_join(tidy_media_df %>% 
+              group_by(screen_name) %>% 
+              summarise(total = n())) %>%
+  mutate(freq = n/total)
+
+
+tidy_media_tf_idf %>%
+  group_by(screen_name) %>%
+  slice_max(tf_idf, n = 12) %>%
+  ungroup() %>%
+  ggplot(aes(tf_idf, fct_reorder(word, tf_idf), fill = screen_name)) +
+  geom_col(show.legend = FALSE) +
+  facet_wrap(~screen_name, ncol = 2, scales = "free") +
+  labs(x = "tf-idf", y = NULL)
+
+```
+Topic Modelling:
+```{r}
+tidy_matrix <- tidy_media_df %>% count(screen_name, word) %>% cast_dfm(screen_name, word, n)
+
+ 
+media_lda <- LDA(tidy_matrix, k = 5, control = list(seed = 1234))
+media_lda
+media_topics <- tidy(media_lda, matrix = "beta")
+media_topics
+media_top_terms <- media_topics %>%
+group_by(topic) %>%
+slice_max(beta, n = 10) %>%
+ungroup() %>%
+arrange(topic, -beta)
+ 
+
+media_top_terms %>%
+  mutate(term = reorder_within(term, beta, topic)) %>%
+  pivot_wider(id_cols = term, names_from = topic, values_from = beta) %>%
+  rename("Nations Address" = 2, "Getting vaccinated for third wave" = 3, "Announcement of vaccine" = 4, "Covid-19: South Africa update" = 5, "Vaccination distributions" = 6) %>%
+  pivot_longer(cols = c(2,3,4,5,6), names_to = "topic", values_to = "beta") %>%
+  drop_na() %>%
+  ggplot(aes(beta, term, fill = factor(topic))) +
+  geom_col(show.legend = FALSE) +
+  facet_wrap(~ topic, scales = "free") +
+  scale_y_reordered()
+```
+Determing K:
+```{r}
+# install.packages("ldatuning")
+# 
+# install.packages("devtools")
+# devtools::install_github("nikita-moor/ldatuning")
+
+library("ldatuning")
+
+library("topicmodels")
+data("AssociatedPress", package="topicmodels")
+dtm <- AssociatedPress[1:10, ]
+
+result <- FindTopicsNumber(
+  tidy_matrix,
+  topics = seq(from = 2, to = 15, by = 1),
+  metrics = c("Griffiths2004", "CaoJuan2009", "Arun2010", "Deveaud2014"),
+  method = "Gibbs",
+  control = list(seed = 77),
+  mc.cores = 2L,
+  verbose = TRUE
+)
+
+FindTopicsNumber_plot(result)
+
+```
+
+
+
+
+
+

@@ -7,7 +7,7 @@ What tweets got the most attention.
 frequency of tweets posted on a topic
 
 
-```{r}
+```{r SETUP}
 library(rtweet)
 library(ggplot2)
 library(tidyr)
@@ -24,6 +24,10 @@ library(lubridate)
 library(zoo)
 library(plotly)
 library(forcats)
+library(igraph)
+library(ggraph)
+library(widyr)
+library(qdapRegex)
 
 origop <- options("httr_oauth_cache")
 options(httr_oauth_cache = TRUE)
@@ -58,100 +62,82 @@ media_agency_df <- media_agency_df[ , colSums(is.na(media_agency_df)) < nrow(med
 
 # Comparing Tweet Archives
 
-
+Some tweets fetched date further back. The 3200 tweet pull per user causes this. It tells us that agencies like News24 and SABC News Tweet more daily than Daily Maverick.
 ```{r}
 ggplot(media_agency_df, aes(x = created_at, fill = screen_name)) +
   geom_histogram(position = "identity", bins = 20, show.legend = FALSE) +
   facet_wrap(~screen_name, ncol = 1)
 ```
 
+We first clean the original text to remove links, punctuation, digits, links, @'s.
+Then we tokenize the Tweets and remove stop words from tidytext and our own stopword dictionary. We also use the "twitter" token to handle any left over @'s and URLS.
 ```{r Clean up}
 
-covid_dictionary <- c("herd", "immunity", "incubation", "job", "loss", "Kits", "lockdown", "mask", "N95", "outbreak", "pandemic", "quarantine", "recovery", "sanitiser", "transmission", "Underlying", "conditions", "Ventilators", "WHO", "xenophobia", "youTube", "zoonotic", "stay-at-home", "covid", "coronavirus", "hyrdoxychloroquine", "asymptomatic", "frontline", "virus", "self-isolation", "disinfectant", "shelter-in-place", "masks", "SARS-CoV-2", "ICU", "corona", "reopen", "distancing", "covering", "furlough", "tracer", "easing", "remdesivir", "mail-in", "hornet", "antibody", "in-person", "defund", "racism", "looting", "loot", "reopen", "two-metre", "pandemic", "looter", "distancing", "dexamethasone", "racial", "vaccine")
+# covid_dictionary <- c("herd", "immunity", "incubation", "job", "loss", "Kits", "lockdown", "mask", "N95", "outbreak", "pandemic", "quarantine", "recovery", "sanitiser", "transmission", "Underlying", "conditions", "Ventilators", "WHO", "xenophobia", "youTube", "zoonotic", "stay-at-home", "covid", "coronavirus", "hyrdoxychloroquine", "asymptomatic", "frontline", "virus", "self-isolation", "disinfectant", "shelter-in-place", "masks", "SARS-CoV-2", "ICU", "corona", "reopen", "distancing", "covering", "furlough", "tracer", "easing", "remdesivir", "mail-in", "hornet", "antibody", "in-person", "defund", "racism", "looting", "loot", "reopen", "two-metre", "pandemic", "looter", "distancing", "dexamethasone", "racial", "vaccine", "curfew","johnssons", "astrazeneca", "hospitals", "social-distance", "social-distancing", "police", "regulations", "symptoms", "testing", "positive-tests", "negative-tests" , "confirmed-cases", "restrictions", "deaths", "infected", "recoveries", "level", "jobs", "unemployed", "doctors", "infections", "sanitise", "sanitiser", "sanitisation", "containment")
 
 #JUST tidy
+rm_twitter_n_url <- rm_(pattern=pastex("@rm_twitter_url", "@rm_url"))
 media_agency_df <- media_agency_df %>% 
-  mutate(text = gsub("?(f|ht)tp(s?)://(.*)[.][a-z]+", "", text),
-         text = gsub("&amp", "", text),
-         text = gsub("(RT|via)((?:\\b\\W*@\\w+)+)", "", text),
-         text = gsub("@\\w+", "", text),
-         text = gsub("[[:punct:]]", "", text),
-         text = gsub("[[:digit:]]", "", text),
-         text = gsub("http\\w+", "", text),
-         text = gsub("[ \t]{2,}", "", text),
-         text = gsub("^\\s+|\\s+$", "", text),
-         text = gsub("enca", "", text),
-         text = gsub("dstv", "", text),
-         text = gsub("sabcnews", "", text),
-         text = gsub("&amp", "", text)) %>% 
+  mutate(text = rm_twitter_n_url(text),
+         text = gsub("@\\w+", " ", text),
+         text = gsub("[[:punct:]]", " ", text),
+         text = gsub("[[:digit:]]", " ", text),
+         text = gsub("[ \t]{2,}", " ", text),
+         text = gsub("^\\s+|\\s+$", " ", text),
+         text = gsub("^\\s+|\\s+$", " ", text),
+         text = gsub("&amp", " ", text)) %>% 
   mutate(text = str_replace_all(text," "," "),
          text = str_replace_all(text,"RT @[a-z,A-Z]*: "," "),
          text = str_replace_all(text,"#[a-z,A-Z]*"," "),
-         text = str_replace_all(text,"@[a-z,A-Z]*"," ")) 
-  #filter(str_detect(text, fixed(covid_dictionary, ignore_case = TRUE))) 
-  
+         text = str_replace_all(text,"@[a-z,A-Z]*"," "))  
+#  filter(str_detect(text, fixed(covid_dictionary, ignore_case = TRUE))) 
+
+#most stop words are filtered based on the media agencies tag at the beginning of each Tweet. eg. WATCH: *headline follows*.
+agency_stop_words <- tibble(word = c("sabcnews", "enca", "dstv", "sabckzn", "maverick", "opinionista", "dm", "scorpio", "dstv403", "itus", "rt", "amp", "tgifood", "mamelodi", "sundowns", "ofmagazineavailable", "casablanca", "oped", "newsdeck", "editorial", "newflash", "southafricanmorning", "newslink", "encas", "southafricatonight", "themiddayview", "thelead", "propertymatters", "ba", "ka", "ya", "ga", "wa", "le", "kwa", "morninglivesabc", "monday", "prix", "azerbaijan", "encasis", "encabusiness", "encasspeaks", "south", "africa", "pm", "sa","pm", "encas", "iss", "icymi", "timeslive", "fullview", "newsbreaksjul", "newsbreakjul"))  
+
 #tidy df and unnest
 tidy_media_df <- media_agency_df %>% 
   #filter(str_detect(text, fixed(covid_dictionary, ignore_case = TRUE))) %>%
-  filter(!str_detect(text, "^RT")) %>%
-  mutate(text = gsub(" ?(f|ht)tp(s?)://(.*)[.][a-z]+", " ", text)) %>%
   unnest_tokens(word, text, token = "tweets") %>% 
   filter(!word %in% stop_words$word,
+         !word %in% agency_stop_words$word,
+        # !word %in% negated_words$word2,
          !word %in% str_remove_all(stop_words$word, "'"),
-         str_detect(word, "[a-z]"),
-         !(word =="sabcnews" |
-             word =="enca" |
-             word =="https" |
-             word =="dstv" |
-             word =="sabckzn" |
-             word =="maverick" |
-             word =="opinion" |
-             word =="opinionista" |
-             word =="dm" |
-             word =="scorpio" |
-             word =="anc" |
-             word =="south" |
-             word =="africa" |
-             word =="dstv403" |
-             word =="t.co" |
-             word =="itus" |
-             word =="rt" |
-             word =="amp"))
+         str_detect(word, "[a-z]"))
 
 ```
 
-```{r tf-idf}
+From our tidyed Tweet dataset, we look for the top words that appear. This will give us a good idea of what topics are being discussed the most. We find that COVID-19 has been the main topic of discussion. President appears second as President Ramaphosa of South Africa usually adresses the nation regarding COVID-19 information. Additionally, Zuma also appears as he is mentioned as "former president Zuma" in most articles. Zuma appears more as his recent court avoidance and sentencing is being Tweeted. General words surrounding the COVID-19 topic as it is still the main pressure on the country, espicially involving Gauteng's rise in infections. 
+```{r top words}
 #top words
 top_words <- tidy_media_df %>% 
   anti_join(stop_words) %>% 
   count(word) %>% 
   arrange(desc(n))
-# top_words %>% 
-#   slice(1:20) %>% 
-#   ggplot(aes(reorder(word, -n), n, fill = word)) +
-#   geom_bar(stat="identity") +
-#   theme_minimal() +
-#   theme(
-#     axis.text.x = element_text(angle = 60, hjust = 1, size = 13),
-#     plot.title = element_text(hjust = 0.5, size = 18)
-#     ) +
-#   ylab("Frequency") +
-#   xlab ("") +
-#   ggtitle("Most frequent media agency tweets") +
-#   guides(fill=FALSE)
+top_words %>%
+  slice(1:20) %>%
+  ggplot(aes(reorder(word, -n), n, fill = word)) +
+  geom_bar(stat="identity") +
+  theme_minimal() +
+  theme(
+    axis.text.x = element_text(angle = 60, hjust = 1, size = 13),
+    plot.title = element_text(hjust = 0.5, size = 18)
+    ) +
+  ylab("Frequency") +
+  xlab ("") +
+  ggtitle("Most frequent media agency tweets") +
+  guides(fill=FALSE)
+```
 
+News
+```{r tf-idf frequency per agency}
 #tf-idf
 tidy_media_tf_idf <- tidy_media_df %>% 
   select(screen_name, word) %>% 
   count(word, screen_name) %>% 
   bind_tf_idf(word, screen_name, n) 
-#top_tfidf
-# tidy_media_tf_idf %>% 
-#   slice(-(1:582)) %>% 
-#   arrange(desc(tf_idf))
 
-
-#calculate a frequency for each person and word
+#calculate a frequency for each agency and word
 frequency <- tidy_media_tf_idf %>% 
   group_by(screen_name) %>% 
   count(word, sort = TRUE) %>% 
@@ -159,7 +145,8 @@ frequency <- tidy_media_tf_idf %>%
               group_by(screen_name) %>% 
               summarise(total = n())) %>%
   mutate(freq = n/total)
-
+tidy_media_tf_idf %>% filter(word == "iss")
+tidy_media_df %>% filter(word == "iss")
 
 tidy_media_tf_idf %>%
   group_by(screen_name) %>%
@@ -169,7 +156,165 @@ tidy_media_tf_idf %>%
   geom_col(show.legend = FALSE) +
   facet_wrap(~screen_name, ncol = 2, scales = "free") +
   labs(x = "tf-idf", y = NULL)
+```
 
+By modelling bigrams and trigrams for our dataset gives us a better understanding of what topic is being discussed with each word. We can then also see which sentiments are incorrectly labeled. "not good" gives better context of a negative sentiment, rather than it being incorrectly identified as positive good.
+```{r bigrams}
+#bigrams
+tidy_bigram_df <- media_agency_df %>% 
+  #filter(str_detect(text, fixed(covid_dictionary, ignore_case = TRUE))) %>%
+  filter(!str_detect(text, "^RT")) %>%
+  mutate(text = gsub(" ?(f|ht)tp(s?)://(.*)[.][a-z]+", " ", text)) %>%
+  unnest_tokens(bigram, text, token = "ngrams", n = 2) %>% 
+  separate(bigram, c("word1", "word2"), sep = " ")
+
+bigrams_filtered <- bigrams_separated %>%
+  filter(!word1 %in% stop_words$word) %>%
+  filter(!word2 %in% stop_words$word)
+
+# new bigram counts:
+bigram_counts <- bigrams_filtered %>% 
+  count(word1, word2, sort = TRUE)
+
+bigrams_united <- bigrams_filtered %>%
+  unite(bigram, word1, word2, sep = " ")
+
+#tf-idf bigrams
+bigram_tf_idf <- bigrams_united %>%
+  count(screen_name, bigram) %>%
+  bind_tf_idf(bigram, screen_name, n) %>%
+  arrange(desc(tf_idf))
+
+bigram_tf_idf %>%
+  group_by(screen_name) %>%
+  slice_max(tf_idf, n = 15) %>%
+  ungroup() %>%
+  ggplot(aes(tf_idf, fct_reorder(bigram, tf_idf), fill = screen_name)) +
+  geom_col(show.legend = FALSE) +
+  facet_wrap(~screen_name, ncol = 2, scales = "free") +
+  labs(x = "tf-idf", y = NULL)
+
+#weights and graphs
+bigram_graph <- bigram_counts %>%
+  filter(n > 100) %>%
+  graph_from_data_frame()
+
+set.seed(1234)
+a <- grid::arrow(type = "closed", length = unit(.15, "inches"))
+ggraph(bigram_graph, layout = "fr") +
+  geom_edge_link(aes(edge_alpha = n), show.legend = FALSE,
+                 arrow = a, end_cap = circle(.07, 'inches')) +
+  geom_node_point(color = "lightblue", size = 5) +
+  geom_node_text(aes(label = name), vjust = 1, hjust = 1, repel = TRUE) +
+  theme_void()
+```
+
+We give more weight to words that appear more often with the incorrect sentiment. We can now reverse the sentiment of these words once VADER has been run on the dataset.
+```{r negation words}
+#vader lexicon imported from VADER GitHub 
+vader_lexicon <- read_csv2("data_in/vader_lexicon.csv") %>% 
+  rename("word" = TOKEN, "value" = `MEAN-SENTIMENT-RATING`)
+
+#common negation words
+negation_words <- c("not", "no", "never", "without", "no", "not", "none", "no one", "nobody", "nothing", "neither", "nowhere", "never", "doesn’t", "isn’t", "wasn’t", "shouldn’t", "wouldn’t", "couldn’t", "won’t", "can’t", "don’t")
+negated_words <- bigrams_separated %>%
+  filter(word1 %in% fixed(negation_words, ignore_case = TRUE)) %>%
+  inner_join(vader_lexicon, by = c(word2 = "word")) %>%
+  mutate(value = as.double(value)) %>% 
+  count(word1, word2, value, sort = TRUE) %>% 
+  mutate(contribution = n * value) %>%
+  arrange(desc(abs(contribution))) %>%
+  mutate(word2 = reorder(word2, contribution))
+negated_words %>%
+  head(40) %>% 
+  ggplot(aes(n * value, word2, fill = n * value > 0)) +
+  geom_col(show.legend = FALSE) + 
+  facet_wrap(~word1,scales = "free_y") +
+  labs(x = "Sentiment value * # number of occurrences",
+       y = "Words preceded by negation terms")
+
+```
+
+Trigrams were modelled but were not necessary as bigrams provided enough information
+```{r trigrams}
+#trigrams
+tidy_trigram_df <- media_agency_df %>%
+  filter(!str_detect(text, "^RT")) %>%
+  mutate(text = gsub(" ?(f|ht)tp(s?)://(.*)[.][a-z]+", " ", text)) %>%
+  unnest_tokens(trigram, text, token = "ngrams", n = 3) %>%
+  separate(trigram, c("word1", "word2", "word3"), sep = " ")
+
+trigrams_filtered <- trigrams_separated %>%
+  filter(!word1 %in% stop_words$word) %>%
+  filter(!word2 %in% stop_words$word) %>% 
+  filter(!word3 %in% stop_words$word) 
+
+# new trigrams counts:
+trigram_counts <- trigrams_filtered %>% 
+  count(word1, word2, word3, sort = TRUE)
+
+trigrams_united <- trigrams_filtered %>%
+  unite(trigram, word1, word2, word3, sep = " ")
+
+#tf-idf trigrams
+tidy_trigram_df <- trigrams_united %>%
+  count(screen_name, trigram) %>%
+  bind_tf_idf(trigram, screen_name, n) %>%
+  arrange(desc(tf_idf))
+
+tidy_trigram_df %>%
+  group_by(screen_name) %>%
+  slice_max(tf_idf, n = 10) %>%
+  ungroup() %>%
+  ggplot(aes(tf_idf, fct_reorder(trigram, tf_idf), fill = screen_name)) +
+  geom_col(show.legend = FALSE) +
+  facet_wrap(~screen_name, ncol = 2, scales = "free") +
+  labs(x = "tf-idf", y = NULL)
+
+```
+
+
+```{r Counting and correlating among sections, warning=FALSE}
+media_agency_section_words <- media_agency_df %>%
+  mutate(section = row_number() %/% 10) %>%
+  filter(section > 0) %>%
+  unnest_tokens(word, text) %>%
+  filter(!word %in% stop_words$word)
+
+# count words co-occuring within sections
+word_pairs <- media_agency_section_words %>%
+  pairwise_count(word, section, sort = TRUE)
+
+# we need to filter for at least relatively common words first
+word_cors <- media_agency_section_words %>%
+  group_by(word) %>%
+  filter(n() >= 20) %>%
+  pairwise_cor(word, section, sort = TRUE)
+
+# Correlation of next word
+# word_cors %>%
+#   filter(item1 == "vaccine")
+
+word_cors %>%
+  filter(item1 %in% c("covid", "vaccine", "lockdown", "guateng")) %>%
+  group_by(item1) %>%
+  slice_max(correlation, n = 6) %>%
+  ungroup() %>%
+  mutate(item2 = reorder(item2, correlation)) %>%
+  ggplot(aes(item2, correlation)) +
+  geom_bar(stat = "identity") +
+  facet_wrap(~ item1, scales = "free") +
+  coord_flip()
+
+set.seed(1234)
+word_cors %>%
+  filter(correlation > .7) %>%
+  graph_from_data_frame() %>%
+  ggraph(layout = "fr") +
+  geom_edge_link(aes(edge_alpha = correlation), show.legend = FALSE, edge_width = 3) +
+  geom_node_point(color = "lightblue", size = 5) +
+  geom_node_text(aes(label = name), repel = TRUE) +
+  theme_void()
 ```
 
 ```{r VADER}
@@ -182,13 +327,13 @@ media_agency_df <- media_agency_df %>% mutate("X1" = row_number())
 media_vader_df <- media_agency_df %>% left_join(vader_df, by = "X1")
 
 #sentiment
-ggplot(data=media_vader_df, aes(x=created_at, y=rollmean(compound, 30,  na.pad=TRUE))) +
-       geom_line(color="pink", size=.5)+
-  geom_smooth() +
+ggplotly(ggplot(data=media_vader_df, aes(x=created_at)) +
+  geom_line(aes(y=rollmean(compound, k=30, na.pad = TRUE)), color="pink", size=.5)+
+  geom_smooth(aes(y=compound)) +
   theme_minimal()+
   facet_wrap(~screen_name) +
-  scale_y_continuous(expand = c(0,0), breaks = c(-0.4,-0.2,0,0.2,0.4)) +
-  ylim(c(-0.4, 0.4))
+  scale_y_continuous(expand = c(0,0)))
+
 
 media_vader_df %>% filter(compound != 0)%>% mutate(created_at = as.Date(created_at)) %>%  group_by(created_at) %>% mutate(compound_daily = mean(compound), pos_daily = mean(pos), neg_daily = mean(neg), neu_daily = mean(neu))
 
@@ -217,16 +362,40 @@ ggplot(media_vader_df %>% arrange(compound) %>% mutate(X1 = factor(X1, levels = 
 ```
 
 ```{r Interactions}
-media_vader_df %>% select(favorite_count, retweet_count) %>% mutate(favorite_count + retweet_count)
+# media_vader_df %>% select(favorite_count, retweet_count) %>% mutate(favorite_count + retweet_count)
 
-plot <- media_vader_df %>% mutate(created_at = as.Date(created_at)) %>%  group_by(created_at) %>% mutate(retweet_daily = mean(retweet_count), favorite_daily = mean(favorite_count), total = mean(favorite_count + retweet_count)) %>% 
-  ggplot(aes(created_at)) +
+media_vader_df <- media_vader_df %>% 
+  mutate(created_at = as.Date(created_at)) %>%  
+  group_by(created_at) %>% 
+  mutate(retweet_daily = mean(retweet_count), favorite_daily = mean(favorite_count), total = mean(favorite_count + retweet_count))
+# mean for the day
+ggplotly(ggplot(data = media_vader_df, aes(created_at)) +
   geom_ribbon(aes(ymin = 0, ymax = total, fill = "Total")) +
   geom_ribbon(aes(ymin = 0, ymax = favorite_daily, fill = "Favorites")) +
-  geom_ribbon(aes(ymin = 0, ymax = retweet_daily, fill = "Retweets"))
-  
-ggplotly(plot)
+  geom_ribbon(aes(ymin = 0, ymax = retweet_daily, fill = "Retweets")) + 
+    theme(
+      axis.title.x = element_blank(),
+      axis.title.y = element_blank(),
+      axis.ticks = element_blank(),
 
+      legend.justification=c(0,0),
+      legend.position=c(0,0),
+      legend.background = element_blank(),
+      legend.key = element_blank(),
+      legend.title = element_blank(),
+
+      plot.title = element_text(size=14, face="bold", margin = margin(0, 0, 10, 0), hjust = 0),
+      plot.caption = element_text(face="bold", hjust = 0),
+    )
+  , tooltip = c("total", "favorite_daily", "retweet_daily", "created_at"))
+
+#peak tweets
+media_vader_df %>% 
+  filter(created_at == "2021-05-01" ) %>% 
+  slice_max(favorite_count + retweet_count) 
+media_vader_df %>% 
+  filter(created_at == "2021-05-23" ) %>% 
+  slice_max(favorite_count + retweet_count) 
 
 media_vader_df %>% 
    filter(screen_name == "dailymaverick") %>% 
@@ -243,7 +412,7 @@ class(media_vader_df$created_at)
 ```
 
 ```{r Topic Modelling}
-tidy_matrix <- tidy_covid_media_df %>% count(screen_name, word) %>% cast_dfm(screen_name, word, n)
+tidy_matrix <- tidy_media_df %>% count(screen_name, word) %>% cast_dfm(screen_name, word, n)
 
 media_lda <- LDA(tidy_matrix, k = 5, control = list(seed = 1234))
 
@@ -293,15 +462,6 @@ result <- FindTopicsNumber(
   mc.cores = 2L,
   verbose = TRUE
 )
-
-
-##  fit models... done.
-##  calculate metrics:
-##   Griffiths2004... done.
-##   CaoJuan2009... done.
-##   Arun2010... done.
-##   Deveaud2014... done.
-
 
 FindTopicsNumber_plot(result)
 ```
