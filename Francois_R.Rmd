@@ -443,7 +443,7 @@ redditScrape <- function(subred = c('nameOfSubred', 'allTop'), time = c('day', '
 ```
 Trying PushShift API
 ```{r}
-#devtools::install_github("https://github.com/nathancunn/pushshiftR")
+devtools::install_github("https://github.com/nathancunn/pushshiftR")
 
 getPushshiftData(postType = "comment",
                  size = 1000,
