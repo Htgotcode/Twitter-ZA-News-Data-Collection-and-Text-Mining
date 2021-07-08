@@ -316,7 +316,7 @@ redditScrape <- function(subred = c('nameOfSubred', 'allTop'), time = c('day', '
 	# if more than one time, apply function to each time frame separately
 	if (length(time) > 1) { 
 	  return(lapply(time, function(i) 
-	    redditScrape(subred='allTop', time='week', saveText=FALSE, myDirectory="~/Documents/GitHub/Twitter-ZA-News-Data-Collection-and-Text-Mining/data_in")))
+	    redditScrape(subred='r/southafrica', time='week', saveText=FALSE, myDirectory="~/Documents/GitHub/Twitter-ZA-News-Data-Collection-and-Text-Mining/data_in")))
 	}
 	
 
@@ -324,7 +324,7 @@ redditScrape <- function(subred = c('nameOfSubred', 'allTop'), time = c('day', '
 	# 1. Make the url, get the page. 
 
 	if (subred == 'allTop') {
-		url <- paste('https://www.reddit.com/r/southafrica/top/?f=flair_name%3A%22COVID-19%22&t=week', time, sep = "//")
+		url <- paste('https://www.reddit.com/r/southafrica/top/?f=flair_name%3A%22COVID-19%22&t=week', time, sep = "/")
 	} else {	
 		url <- paste("http://www.reddit.com/r/", subred, "/top/?sort=top&t=", time, sep = "/")
 	}
@@ -334,7 +334,7 @@ redditScrape <- function(subred = c('nameOfSubred', 'allTop'), time = c('day', '
 	#######################################################
 	# 2. Get the links that go to comment sections of the posts
 
-	links <- xpathSApply(doc, "//a/@href")
+	links <- xpathSApply(doc, "comments/of6biy/governments_vaccine_rollout_programme/")
 	comments <- grep("comments", links)
 	comLinks <- links[comments]
 	comments <- grep('reddit.com', comLinks, fixed=TRUE)
@@ -451,8 +451,7 @@ redditScrape <- function(subred = c('nameOfSubred', 'allTop'), time = c('day', '
 
 	textTable
 }
-
-=======
->>>>>>> Stashed changes
+```
+```{r}
 ```
 
