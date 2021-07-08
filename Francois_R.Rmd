@@ -263,7 +263,9 @@ library(wordcloud)
 ```
 Setting up Reddit scraper
 
-Kyle's Reddit stuff
+Kyle's Reddit code that he graciously gave to me :)
+I attempted 2 other reddit web scraping methods for scraping comments from post but they were unsuccessful. We settled instead to just focus on the posts themselves about Covid-19 in South Africa.
+By scraping the r/southafrica subreddit we managed to find about 250 posts dating back to last year December which would be from when South Africa was entering harder lockdown times again. We expect that due to the fact that this is the post themselves and not the comment sof people that the sentiment would be close to neutral or will have tendencies to return to neutral if it deviates from it. We will be making use of a 7 day rolling average  to see the sentiment of the reddit posts as well a smooth graph to see the tendency of the posts sentiment over time.
 ```{r}
 library(RedditExtractoR)
 
@@ -289,10 +291,36 @@ reddit_Covid_data <- reddit_Covid_data %>%
 write_csv(reddit_Covid_data,"data_in/reddit_SA.csv")
 
 reddit_Covid_data$date= dmy(reddit_Covid_data$date)
+reddit_Covid_data<- reddit_Covid_data %>% mutate("X1"=row_number())
 ```
 Sentiment of reddit
 ```{r}
 sd<- get_sentences(reddit_Covid_data$title)
 reddit_sentiment<- sentiment(sd)
+
+reddit_sentiment<- left_join(reddit_Covid_data,reddit_sentiment,
+                             by=c("X1"="element_id"))
+
+
+```
+
+Modeling Reddit sentiment over time
+```{r}
+ggplot(data=reddit_sentiment, aes(x=date, y=rollmean(sentiment, 30,  na.pad=TRUE))) +
+       geom_line(color="pink", size=.5)+
+  geom_smooth() +
+  theme_minimal()+
+  scale_y_continuous(expand = c(0,0), breaks = c(-0.4,-0.2,0,0.2,0.4)) +
+  ylim(c(-0.4, 0.4))+
+  labs(title = "Sentiment from the titles of Reddit post about Covid in SA", x="Date", 
+       y="Sentiment")
+```
+As can be seen from the graph the sentiment of the posts started out more negative and that would correlated to be around to higher infections per day. The sentiment does have a positive trend towards the end of the wave of infections. Even though there is very slight fluctuations the posts seem mostly neutral.
+
+
+
+Attempt at r/NEWS
+```{r}
+reddit_covid_news<- RedditExtractoR::reddit_urls(search_terms = "South Africa", subreddit = "news",page_threshold = 10)
 ```
 
