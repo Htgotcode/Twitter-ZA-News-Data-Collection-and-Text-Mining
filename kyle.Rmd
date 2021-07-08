@@ -168,7 +168,7 @@ tidy_bigram_df <- media_agency_df %>%
   unnest_tokens(bigram, text, token = "ngrams", n = 2) %>% 
   separate(bigram, c("word1", "word2"), sep = " ")
 
-bigrams_filtered <- bigrams_separated %>%
+bigrams_filtered <- tidy_bigram_df %>%
   filter(!word1 %in% stop_words$word) %>%
   filter(!word2 %in% stop_words$word)
 
@@ -217,7 +217,7 @@ vader_lexicon <- read_csv2("data_in/vader_lexicon.csv") %>%
 
 #common negation words
 negation_words <- c("not", "no", "never", "without", "no", "not", "none", "no one", "nobody", "nothing", "neither", "nowhere", "never", "doesn’t", "isn’t", "wasn’t", "shouldn’t", "wouldn’t", "couldn’t", "won’t", "can’t", "don’t")
-negated_words <- bigrams_separated %>%
+negated_words <- tidy_bigram_df %>%
   filter(word1 %in% fixed(negation_words, ignore_case = TRUE)) %>%
   inner_join(vader_lexicon, by = c(word2 = "word")) %>%
   mutate(value = as.double(value)) %>% 
@@ -317,8 +317,8 @@ word_cors %>%
 
 The general sentiment is seen as mostly negative. 
 ```{r VADER}
-vader_df <- vader_df(media_agency_df$text)
-write_as_csv(vader_df, "data_in/vader")
+# vader_df <- vader_df(media_agency_df$text)
+# write_as_csv(vader_df, "data_in/vader")
 
 vader_df <- read_csv("data_in/vader.csv")
 vader_df <- vader_df %>% mutate("X1" = row_number())
