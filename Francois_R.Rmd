@@ -245,6 +245,7 @@ covid_dictionary <- c("herd", "immunity", "incubation", "job", "loss", "Kits", "
                       "deaths","infected","recoveries","level","jobs","unemployed",
                       "doctors","infections","sanitise","sanitiser","sanitisation",
                       "containment")
+<<<<<<< Updated upstream
 ```
 
 Twitter Data Collection
@@ -451,5 +452,7 @@ redditScrape <- function(subred = c('nameOfSubred', 'allTop'), time = c('day', '
 	textTable
 }
 
+=======
+>>>>>>> Stashed changes
 ```
 
