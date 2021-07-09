@@ -289,7 +289,7 @@ write_csv(reddit_Covid_data,"data_in/reddit_SA.csv")
 reddit_Covid_data$date= dmy(reddit_Covid_data$date)
 reddit_Covid_data<- reddit_Covid_data %>% mutate("X1"=row_number())
 ```
-Sentiment of reddit
+Sentiment of reddit posts
 ```{r}
 sd<- get_sentences(reddit_Covid_data$title)
 reddit_sentiment<- sentiment(sd)
@@ -319,7 +319,7 @@ output: html_notebook
 ---
 
 The Reddit hole of comments. All who enter, beware!
-
+Here we create a dataframe from comments made by users on posts that have the topic of Covid-19
 
 ```{r SETUP}
 library(rtweet)
@@ -352,17 +352,6 @@ comments<- get_reddit(search_terms = "Covid-19", subreddit = "southafrica", page
 write_csv(comments, "data_in/reddit_comments.csv")
 ```
 
-
-# Comparing Tweet Archives
-
-Some tweets fetched date further back. The 3200 tweet pull per user causes this. It tells us that agencies like News24 and SABC News Tweet more daily than Daily Maverick.
-```{r}
-ggplot(media_agency_df, aes(x = created_at, fill = screen_name)) +
-  geom_histogram(position = "identity",
-                 bins = 20,
-                 show.legend = FALSE) +
-  facet_wrap( ~ screen_name, ncol = 1)
-```
 
 We first clean the original text to remove links, punctuation, digits, links, @'s.
 Then we tokenize the Tweets and remove stop words from tidytext and our own stopword dictionary. We also use the "twitter" token to handle any left over @'s and URLS.
@@ -498,7 +487,7 @@ tidy_reddit_df <- reddit_comments_df %>%
 From our tidied Tweet dataset, we look for the top words that appear. This will give us a good idea of what topics are being discussed the most. We find that COVID-19 has been the main topic of discussion. President appears second as President Ramaphosa of South Africa usually addresses the nation regarding COVID-19 information. Additionally, Zuma also appears as he is mentioned as "former president Zuma" in most articles. Zuma appears more as his recent court avoidance and sentencing is being Tweeted. General words surrounding the COVID-19 topic as it is still the main pressure on the country, especially involving Gauteng's rise in infections. 
 ```{r top words}
 #top words
-top_words <- tidy_media_df %>%
+top_words <- tidy_reddit_df %>%
   anti_join(stop_words) %>%
   count(word) %>%
   arrange(desc(n))
@@ -517,12 +506,12 @@ top_words %>%
   ) +
   ylab("Frequency") +
   xlab ("") +
-  ggtitle("Most frequent media agency tweets") +
+  ggtitle("Most frequent words used in reddit comments") +
   guides(fill = FALSE)
 ```
 
 After changing, adding, and removing terms from the filters, we can conclude that the tf-idf anaylsis is not useful for these media agencies. The selected media agencies post tables of covid data with different column names, or use unique names to categorize their Tweets. When tf-idf runs, it increases their term weights as they are "unique" because they are not found among other media agencies. These words are usually not telling. What it can tell us - which segments these media agencies post about the most.
-```{r tf-idf frequency per agency}
+```{r tf-idf frequency per post}
 #tf-idf
 tidy_reddit_tf_idf <- tidy_reddit_df %>%
   select(author, word) %>%
@@ -549,7 +538,7 @@ tidy_reddit_tf_idf %>%
   labs(x = "tf-idf", y = NULL)
 ```
 
-By modeling bigrams and trigrams for our dataset gives us a better understanding of what topic is being discussed with each word. We can then also see which sentiments are incorrectly labeled. "not good" gives better context of a negative sentiment, rather than it being incorrectly identified as positive good.
+By modeling bigrams and trigrams for our dataset gives us a better understanding of what topic is being discussed with each word. We can then also see which sentiments are incorrectly labeled. "not good" gives better context of a negative sentiment, rather than it being incorrectly identified as positive good. Although this works really well for Twitter, it does not seems to carry through that well to the point of interpretation for Reddit data.
 ```{r bigrams}
 #bigrams
 tidy_bigram_df <- reddit_comments_df %>%
@@ -739,7 +728,7 @@ word_cors %>%
   theme_void()
 ```
 
-The general sentiment is mostly negative. News articles use negative headlines to get a faster reaction from people when skimming through news.
+What we noticed here is that alot of the data is difficult to model due to the size and the amount of different posts. What we can however see is that more recent tweets seem to have a more negative compound sentiment value than tweets from earlier this year.
 ```{r VADER}
 #vader_df <- vader_df(reddit_comments_df$comment)
 #write_as_csv(vader_df, "data_in/vader_reddit_comments")
@@ -892,10 +881,10 @@ interactions_plot <- ggplotly(
 # @News24: Coca-Cola lost $4 billion in market value after Cristiano Ronaldo suggested people drink water instead.
 # @SABCNews: BREAKING NEWS: King of Eswatini has fled amid public violence in the country.
 
-image_read("images/interactions_plot.png")
+#image_read("images/interactions_plot.png")
 ```
 
-Our main topic influence is COVID-19 as this is what currently affects the country the most. 
+Our main topic influence is COVID-19 as this is what currently affects the country the most. We based our data collection around the word COVID-19 and expect to see alot of inter related terms about it spread throughout the different topics. 
 ```{r Topic Modelling}
 tidy_matrix <-
   tidy_reddit_df %>% count(author, word) %>% cast_dfm(author, word, n)
@@ -917,10 +906,10 @@ rcomments_top_terms %>%
               values_from = beta) %>%
   rename(
     "Legal News" = 2,
-    "Former President Zuma facing court" = 3,
+    "Gauteng & lockdown" = 3,
     "Nations Address" = 4,
     "Covid & Business World News" = 5,
-    "Minister News" = 6
+    "Vaccines" = 6
   ) %>%
   pivot_longer(cols = c(2, 3, 4, 5, 6),
                names_to = "topic",
