@@ -366,168 +366,15 @@ reddit_comments_df <- reddit_comments_df %>%
     comment = gsub("[ |\t]{2,}", " ", comment),
     comment = gsub("^ ", " ", comment),
     comment = gsub(" $", " ", comment),
-    comment = gsub("^BUSINESS", " ", comment),
-    comment = gsub("^World", " ", comment)
+    
   ) %>%
   mutate(
     comment = str_replace_all(comment, " ?(f|ht)(tp)(s?)(://)(.*)[.|/](.*)", " "),
     comment = str_replace_all(comment, " ", " "),
-    comment = str_replace_all(comment, "RT @[a-z,A-Z]*: ", " "),
-    comment = str_replace_all(comment, "#[a-z,A-Z]*", " "),
-    comment = str_replace_all(comment, "@[a-z,A-Z]*", " ")
+    comment = str_replace_all(comment, "'", " ")
+
   )
-
-#most stop words are filtered based on the media agencies tag at the beginning of each Tweet. eg. WATCH: *headline follows*.
-agency_stop_words <-
-  tibble(
-    word = c(
-      "sabcnews",
-      "enca",
-      "dstv",
-      "sabckzn",
-      "maverick",
-      "opinionista",
-      "dm",
-      "scorpio",
-      "dstv403",
-      "itus",
-      "rt",
-      "amp",
-      "tgifood",
-      "mamelodi",
-      "sundowns",
-      "ofmagazineavailable",
-      "casablanca",
-      "oped",
-      "newsdeck",
-      "editorial",
-      "newflash",
-      "southafricanmorning",
-      "newslink",
-      "encas",
-      "southafricatonight",
-      "themiddayview",
-      "thelead",
-      "propertymatters",
-      "ba",
-      "ka",
-      "ya",
-      "ga",
-      "wa",
-      "le",
-      "kwa",
-      "morninglivesabc",
-      "monday",
-      "prix",
-      "azerbaijan",
-      "encasis",
-      "encabusiness",
-      "encasspeaks",
-      "south",
-      "africa",
-      "pm",
-      "sa",
-      "pm",
-      "encas",
-      "iss",
-      "icymi",
-      "timeslive",
-      "fullview",
-      "newsbreaksjul",
-      "newsbreakjul",
-      "sabc",
-      "nca",
-      "ncas",
-      "op",
-      "ig",
-      "ed",
-      "pl",
-      "news24",
-      "news24s",
-      "dm168",
-      "siness",
-      "usiness",
-      "ewsdeck",
-      "orld",
-      "sunday",
-      "friday",
-      "saturday",
-      "thursday",
-      "wednesday",
-      "monday",
-      "tuesday",
-      "pics",
-      "live"
-    )
-  )
-
-#tidy df and unnest
-tidy_reddit_df <- reddit_comments_df %>%
-  #filter(str_detect(text, fixed(covid_dictionary, ignore_case = TRUE))) %>%
-  unnest_tokens(word, comment, token = "tweets") %>%
-  filter(
-    !word %in% stop_words$word,!word %in% agency_stop_words$word, 
-    # !word %in% negated_words$word2, 
-    !word %in% str_remove_all(stop_words$word, "'"),
-    str_detect(word, "[a-z]")
-  )
-
 ```
-
-From our tidied comment dataset, we look for the top words that appear. This will give us a good idea of what most people comment about. We find that most people talk about other people usually in conjunction with other words like vaccines or covid.
-```{r top words}
-#top words
-top_words <- tidy_reddit_df %>%
-  anti_join(stop_words) %>%
-  count(word) %>%
-  arrange(desc(n))
-top_words %>%
-  slice(1:20) %>%
-  ggplot(aes(reorder(word,-n), n, fill = word)) +
-  geom_bar(stat = "identity") +
-  theme_minimal() +
-  theme(
-    axis.text.x = element_text(
-      angle = 60,
-      hjust = 1,
-      size = 13
-    ),
-    plot.title = element_text(hjust = 0.5, size = 18)
-  ) +
-  ylab("Frequency") +
-  xlab ("") +
-  ggtitle("Most frequent words used in reddit comments") +
-  guides(fill = FALSE)
-```
-
-After changing, adding, and removing terms from the filters, we can conclude that the tf-idf anaylsis is not useful for these comments. The simple amount of comment data per post and the fact that the time frames are sporadic make that you are unable to . When tf-idf runs, it increases their term weights as they are "unique" because they are not found among other media agencies. These words are usually not telling. What it can tell us is which segments these media agencies post about the most. With the size of the dataframe we used the visualisation is too compressed to currently make use of it when viewed in R.
-```{r tf-idf frequency per post}
-#tf-idf
-tidy_reddit_tf_idf <- tidy_reddit_df %>%
-  select(author, word) %>%
-  group_by(author) %>%
-  count(word, author) %>%
-  bind_tf_idf(word, author, n)
-
-#calculate a frequency for each agency and word
-frequency <- tidy_reddit_tf_idf %>%
-  group_by(author) %>%
-  count(word, sort = TRUE) %>%
-  left_join(tidy_reddit_df %>%
-              group_by(author) %>%
-              summarise(total = n())) %>%
-  mutate(freq = n / total)
-
-tidy_reddit_tf_idf %>%
-  group_by(author) %>%
-  slice_max(tf_idf, n = 15) %>%
-  ungroup() %>%
-  ggplot(aes(tf_idf, fct_reorder(word, tf_idf), fill = author)) +
-  geom_col(show.legend = FALSE) +
-  facet_wrap(~ author, ncol = 2, scales = "free") +
-  labs(x = "tf-idf", y = NULL)
-```
-
 By modeling bigrams and trigrams for our dataset gives us a better understanding of what topic is being discussed with each word. We can then also see which sentiments are incorrectly labeled. "not good" gives better context of a negative sentiment, rather than it being incorrectly identified as positive good. Although this works really well for Twitter, it does not seems to carry through that well to the point of interpretation for Reddit data.
 ```{r bigrams}
 #bigrams
@@ -635,6 +482,85 @@ negated_words %>%
        y = "Words preceded by negation terms")
 
 ```
+
+```{r}
+#most stop words are filtered based on the media agencies tag at the beginning of each Tweet. eg. WATCH: *headline follows*.
+agency_stop_words <-
+  tibble(
+    word = c(
+      "people",
+      "don",
+      "gt"
+    )
+  )
+
+#tidy df and unnest
+tidy_reddit_df <- reddit_comments_df %>%
+  #filter(str_detect(text, fixed(covid_dictionary, ignore_case = TRUE))) %>%
+  unnest_tokens(word, comment, token = "words") %>%
+  filter(
+    !word %in% stop_words$word,!word %in% agency_stop_words$word, 
+    # !word %in% negated_words$word2, 
+    str_detect(word, "[a-z]")
+  )
+
+```
+
+From our tidied comment dataset, we look for the top words that appear. This will give us a good idea of what most people comment about. We find that most people talk about other people usually in conjunction with other words like vaccines or covid.
+```{r top words}
+#top words
+top_words <- tidy_reddit_df %>%
+  anti_join(stop_words) %>%
+  count(word) %>%
+  arrange(desc(n))
+top_words %>%
+  slice(1:20) %>%
+  ggplot(aes(reorder(word,-n), n, fill = word)) +
+  geom_bar(stat = "identity") +
+  theme_minimal() +
+  theme(
+    axis.text.x = element_text(
+      angle = 60,
+      hjust = 1,
+      size = 13
+    ),
+    plot.title = element_text(hjust = 0.5, size = 18)
+  ) +
+  ylab("Frequency") +
+  xlab ("") +
+  ggtitle("Most frequent words used in reddit comments") +
+  guides(fill = FALSE)
+```
+
+After changing, adding, and removing terms from the filters, we can conclude that the tf-idf anaylsis is not useful for these comments. The simple amount of comment data per post and the fact that the time frames are sporadic make that you are unable to . When tf-idf runs, it increases their term weights as they are "unique" because they are not found among other media agencies. These words are usually not telling. What it can tell us is which segments these media agencies post about the most. With the size of the dataframe we used the visualisation is too compressed to currently make use of it when viewed in R.
+```{r tf-idf frequency per post}
+#tf-idf
+tidy_reddit_tf_idf <- tidy_reddit_df %>%
+  select(author, word) %>%
+  group_by(author) %>%
+  count(word, author) %>%
+  bind_tf_idf(word, author, n)
+
+#calculate a frequency for each agency and word
+frequency <- tidy_reddit_tf_idf %>%
+  group_by(author) %>%
+  count(word, sort = TRUE) %>%
+  left_join(tidy_reddit_df %>%
+              group_by(author) %>%
+              summarise(total = n())) %>%
+  mutate(freq = n / total)
+
+tidy_reddit_tf_idf %>%
+  group_by(author) %>%
+  slice_max(tf_idf, n = 15) %>%
+  ungroup() %>%
+  ggplot(aes(tf_idf, fct_reorder(word, tf_idf), fill = author)) +
+  geom_col(show.legend = FALSE) +
+  facet_wrap(~ author, ncol = 2, scales = "free") +
+  labs(x = "tf-idf", y = NULL)
+```
+
+
 
 
 The graph below shows which words are most likely to co-occur. We use this to understand the context of words in our topic modelling. From the results we can see that some of the word used is much more popular and common among users who comment on the posts.
@@ -755,7 +681,7 @@ reddit_comments_vader%>%
   summarise(sum_compound = sum(as.double(compound)))
 ```
 
-The plot below maps the average total comments on a post per day.
+The plot below maps the average total comments on a post per day. The amount of comments per day seems relatively low with a huge spike in comments in July. This can be attributed to many different things like a bot or changes to the status quo, for example when the new lockdown level was announced.
 ```{r Interactions, echo=FALSE}
 # media_vader_df %>% select(favorite_count, retweet_count) %>% mutate(favorite_count + retweet_count)
 
@@ -851,7 +777,7 @@ rcomments_topics <- tidy(rcomments_lda, matrix = "beta")
 
 rcomments_top_terms <- rcomments_topics %>%
   group_by(topic) %>%
-  slice_max(beta, n = 10) %>%
+  slice_max(beta, n = 7) %>%
   ungroup() %>%
   arrange(topic,-beta)
 
@@ -861,19 +787,32 @@ rcomments_top_terms %>%
               names_from = topic,
               values_from = beta) %>%
   rename(
-    "Legal News" = 2,
-    "Gauteng & lockdown" = 3,
-    "Nations Address" = 4,
-    "Covid & Business World News" = 5,
-    "Vaccines" = 6
+    "Zuma arrest" = 2,
+    "Vaccine development" = 3,
+    "Covid Tests" = 4,
+    "Covid recovery stories" = 5,
+    "Religions for/against vaccines" = 6,
+    "Hospitals" =7,
+    "Covid data platforms" =8,
+    "Healthcare access" =9,
+    "Lockdown time " =10,
+    "ANC Government mismanagement" =11,
+    "Vaccine funding" =12,
+    "Russian vaccines" =13,
+    "Information about Vaccines" =14,
+    "World Covid Stats" =15,
+    "Risks associated with lockdowns" =16,
+    "Affects of alcohol on hostipal admissions" =17,
+    "Work from home data" =18,
+    "Vaccine data" =19,
   ) %>%
-  pivot_longer(cols = c(2, 3, 4, 5, 6),
+  pivot_longer(cols = c(2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19),
                names_to = "topic",
                values_to = "beta") %>%
   drop_na() %>%
   ggplot(aes(beta, term, fill = factor(topic))) +
   geom_col(show.legend = FALSE) +
-  facet_wrap( ~ topic, scales = "free") +
+  facet_wrap( ~ topic, scales = "free_y",ncol=3) +
   scale_y_reordered()
 ```
 We determine the correct number of topics in mechanisms like the LDA (Latent Dirichlet Allocation) as they determine the quality of features of the words.
