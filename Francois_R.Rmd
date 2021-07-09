@@ -21,18 +21,7 @@ https://mybroadband.co.za/news/internet/358453-here-are-south-africas-most-popul
 These sites are the first sites on the top 10 list of publication sites that include general news along with news about covid-19 that do not have major historical issues that could bring their credibility in question.
 Reasons that other news or publishing sources that are ranked higher were not used is due to the fact that these sources either only focus on specific news like new technology or financial aspects, or these sources are not as popular throughout the whole of South Africa.
 
-Importing Packages
-```{r}
-install.packages("tidytext")
-install.packages("tidyverse")
-install.packages("sentimentr")
-install.packages("textdata")
-install.packages("stringi")
-install.packages("rtweet")
-install.packages("quanteda")
-install.packages("topicmodels")
-install.packages("reshape2")
-```
+
 
 Importing Libraries
 ```{r}
@@ -54,7 +43,7 @@ library(quanteda)
 library(reshape2)
 library(zoo)
 ```
-Importing data
+Importing data of collected tweets. This was done to see which lexicon works best between VADER and SentimentR
 ```{r}
 media_agency_df <- read_csv("data_in/media_agency_tweets.csv")
 media_agency_df <- media_agency_df[ , colSums(is.na(media_agency_df)) < nrow(media_agency_df)]
@@ -148,7 +137,7 @@ sabc<-SentiR_data %>%
 eNCA<-SentiR_data %>%
   filter(screen_name=="eNCA")
 ```
-Graphs
+Graphs plotting the sentiment of the different news agencies over time. As one can see, they all tend to maintain a neutral stance with some fluctuations at time.
 ```{r}
 #graph for News24 sentiment over time
 ggplot(data=news24, aes(x=created_at, y=rollmean(sentiment, 30,  na.pad=TRUE))) +
@@ -209,7 +198,6 @@ ggplot(data=sabc, aes(x=created_at, y=rollmean(sentiment, 30,  na.pad=TRUE))) +
 
 ```
 
-#Kyles Code
 Topic Modelling
 ```{r}
 
@@ -234,7 +222,7 @@ geom_col(show.legend = FALSE) +
 facet_wrap(~ topic, scales = "free") +
 scale_y_reordered()
 ```
-Vader stuff
+Vader stuff. Here we created a dictionary with covid related terms that are commonly used to help us search through the dataframes for relevent tweets and posts.
 ```{r}
 vader_data<- read_csv("data_in/vader_df.csv")
 
@@ -249,7 +237,7 @@ covid_dictionary <- c("herd", "immunity", "incubation", "job", "loss", "Kits", "
 ```
 
 
-
+More libraries
 ```{r}
 library(XML)
 library(RCurl)
@@ -261,13 +249,15 @@ Setting up Reddit scraper
 Kyle's Reddit code that he graciously gave to me :)
 I attempted 2 other reddit web scraping methods for scraping comments from post but they were unsuccessful. We settled instead to just focus on the posts themselves about Covid-19 in South Africa.
 By scraping the r/southafrica subreddit we managed to find about 250 posts dating back to last year December which would be from when South Africa was entering harder lockdown times again. We expect that due to the fact that this is the post themselves and not the comment sof people that the sentiment would be close to neutral or will have tendencies to return to neutral if it deviates from it. We will be making use of a 7 day rolling average  to see the sentiment of the reddit posts as well a smooth graph to see the tendency of the posts sentiment over time.
-We managed to get the comments as well and run analysis on them.
-```{r}
+
+Reddit post data
+```{r Retrieving the Reddit post data}
 library(RedditExtractoR)
 
 reddit_Covid_data<-RedditExtractoR::reddit_urls(search_terms = "Covid-19", subreddit = "southafrica",page_threshold = 10)
 ```
-Cleaning Reddit stuff (Made use of Kyle's twitter cleaner)
+
+Cleaning Reddit post data
 ```{r}
 reddit_Covid_data <- reddit_Covid_data %>%
   mutate(title = gsub(" ?(f|ht)tp(s?)://(.*)[.][a-z]+", "", title ),
@@ -289,7 +279,7 @@ write_csv(reddit_Covid_data,"data_in/reddit_SA.csv")
 reddit_Covid_data$date= dmy(reddit_Covid_data$date)
 reddit_Covid_data<- reddit_Covid_data %>% mutate("X1"=row_number())
 ```
-Sentiment of reddit posts
+Sentiment of reddit posts using SentimentR
 ```{r}
 sd<- get_sentences(reddit_Covid_data$title)
 reddit_sentiment<- sentiment(sd)
@@ -317,7 +307,7 @@ As can be seen from the graph the sentiment of the posts started out more negati
 title: "R Notebook"
 output: html_notebook
 ---
-
+What follows is the modeling of the comment sections of many of the posts we found.
 The Reddit hole of comments. All who enter, beware!
 Here we create a dataframe from comments made by users on posts that have the topic of Covid-19
 
@@ -344,7 +334,7 @@ library(widyr)
 library(qdapRegex)
 library(magick)
 ```
-
+Here we found a way to get the comment of the Reddit posts that were modeled earlier.
 ```{r Fetching Reddit Comments}
 
 comments<- get_reddit(search_terms = "Covid-19", subreddit = "southafrica", page_threshold = 5,
@@ -354,7 +344,7 @@ write_csv(comments, "data_in/reddit_comments.csv")
 
 
 We first clean the original text to remove links, punctuation, digits, links, @'s.
-Then we tokenize the Tweets and remove stop words from tidytext and our own stopword dictionary. We also use the "twitter" token to handle any left over @'s and URLS.
+Then we tokenize the comments and remove stop words from tidytext and our own stopword dictionary. We also use the "twitter" token to handle any left over @'s and URLS.
 ```{r Clean up, include=FALSE}
 #created if more tweets could be accessed to be more topic specific
 # covid_dictionary <- c("herd", "immunity", "incubation", "job", "loss", "Kits", "lockdown", "mask", "N95", "outbreak", "pandemic", "quarantine", "recovery", "sanitiser", "transmission", "Underlying", "conditions", "Ventilators", "WHO", "xenophobia", "youTube", "zoonotic", "stay-at-home", "covid", "coronavirus", "hyrdoxychloroquine", "asymptomatic", "frontline", "virus", "self-isolation", "disinfectant", "shelter-in-place", "masks", "SARS-CoV-2", "ICU", "corona", "reopen", "distancing", "covering", "furlough", "tracer", "easing", "remdesivir", "mail-in", "hornet", "antibody", "in-person", "defund", "racism", "looting", "loot", "reopen", "two-metre", "pandemic", "looter", "distancing", "dexamethasone", "racial", "vaccine", "curfew","johnssons", "astrazeneca", "hospitals", "social-distance", "social-distancing", "police", "regulations", "symptoms", "testing", "positive-tests", "negative-tests" , "confirmed-cases", "restrictions", "deaths", "infected", "recoveries", "level", "jobs", "unemployed", "doctors", "infections", "sanitise", "sanitiser", "sanitisation", "containment")
@@ -484,7 +474,7 @@ tidy_reddit_df <- reddit_comments_df %>%
 
 ```
 
-From our tidied Tweet dataset, we look for the top words that appear. This will give us a good idea of what topics are being discussed the most. We find that COVID-19 has been the main topic of discussion. President appears second as President Ramaphosa of South Africa usually addresses the nation regarding COVID-19 information. Additionally, Zuma also appears as he is mentioned as "former president Zuma" in most articles. Zuma appears more as his recent court avoidance and sentencing is being Tweeted. General words surrounding the COVID-19 topic as it is still the main pressure on the country, especially involving Gauteng's rise in infections. 
+From our tidied comment dataset, we look for the top words that appear. This will give us a good idea of what most people comment about. We find that most people talk about other people usually in conjunction with other words like vaccines or covid.
 ```{r top words}
 #top words
 top_words <- tidy_reddit_df %>%
@@ -510,7 +500,7 @@ top_words %>%
   guides(fill = FALSE)
 ```
 
-After changing, adding, and removing terms from the filters, we can conclude that the tf-idf anaylsis is not useful for these media agencies. The selected media agencies post tables of covid data with different column names, or use unique names to categorize their Tweets. When tf-idf runs, it increases their term weights as they are "unique" because they are not found among other media agencies. These words are usually not telling. What it can tell us - which segments these media agencies post about the most.
+After changing, adding, and removing terms from the filters, we can conclude that the tf-idf anaylsis is not useful for these comments. The simple amount of comment data per post and the fact that the time frames are sporadic make that you are unable to . When tf-idf runs, it increases their term weights as they are "unique" because they are not found among other media agencies. These words are usually not telling. What it can tell us - which segments these media agencies post about the most.
 ```{r tf-idf frequency per post}
 #tf-idf
 tidy_reddit_tf_idf <- tidy_reddit_df %>%
@@ -646,43 +636,6 @@ negated_words %>%
 
 ```
 
-Trigrams were modeled but were not necessary as bigrams provided enough information
-```{r trigrams}
-#trigrams
-tidy_trigram_df <- media_agency_df %>%
-  filter(!str_detect(text, "^RT")) %>%
-  mutate(text = gsub(" ?(f|ht)tp(s?)://(.*)[.][a-z]+", " ", text)) %>%
-  unnest_tokens(trigram, text, token = "ngrams", n = 3) %>%
-  separate(trigram, c("word1", "word2", "word3"), sep = " ")
-
-trigrams_filtered <- trigrams_separated %>%
-  filter(!word1 %in% stop_words$word) %>%
-  filter(!word2 %in% stop_words$word) %>%
-  filter(!word3 %in% stop_words$word)
-
-# new trigrams counts:
-trigram_counts <- trigrams_filtered %>%
-  count(word1, word2, word3, sort = TRUE)
-
-trigrams_united <- trigrams_filtered %>%
-  unite(trigram, word1, word2, word3, sep = " ")
-
-#tf-idf trigrams
-tidy_trigram_df <- trigrams_united %>%
-  count(screen_name, trigram) %>%
-  bind_tf_idf(trigram, screen_name, n) %>%
-  arrange(desc(tf_idf))
-
-tidy_trigram_df %>%
-  group_by(screen_name) %>%
-  slice_max(tf_idf, n = 10) %>%
-  ungroup() %>%
-  ggplot(aes(tf_idf, fct_reorder(trigram, tf_idf), fill = screen_name)) +
-  geom_col(show.legend = FALSE) +
-  facet_wrap( ~ screen_name, ncol = 2, scales = "free") +
-  labs(x = "tf-idf", y = NULL)
-
-```
 
 The graph below shows which words are most likely to co-occur. We use this to understand the context of words in our topic modelling.
 ```{r Counting and correlating among sections, warning=FALSE}
@@ -800,7 +753,7 @@ reddit_comments_vader%>%
   summarise(sum_compound = sum(as.double(compound)))
 ```
 
-The plot below maps the average total interactions by day. From the relevant peaks, we extract the top tweet in that day. 
+The plot below maps the average total comments on a post per day.
 ```{r Interactions, echo=FALSE}
 # media_vader_df %>% select(favorite_count, retweet_count) %>% mutate(favorite_count + retweet_count)
 
@@ -884,7 +837,7 @@ interactions_plot <- ggplotly(
 #image_read("images/interactions_plot.png")
 ```
 
-Our main topic influence is COVID-19 as this is what currently affects the country the most. We based our data collection around the word COVID-19 and expect to see alot of inter related terms about it spread throughout the different topics. 
+Our main topic influence is COVID-19 as this is what currently affects the country the most. We based our data collection around the word COVID-19 and expect to see a lot of inter related terms about it spread throughout the different topics. As you can see, due to the fact that the posts were all about Covid, the comments all inherited the overarching topic.
 ```{r Topic Modelling}
 tidy_matrix <-
   tidy_reddit_df %>% count(author, word) %>% cast_dfm(author, word, n)
