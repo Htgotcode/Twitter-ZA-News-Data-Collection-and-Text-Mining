@@ -684,7 +684,7 @@ word_cors %>%
   theme_void()
 ```
 
-What we noticed here is that alot of the data is difficult to model due to the size and the amount of different posts. What we can however see is that more recent tweets seem to have a more negative compound sentiment value than tweets from earlier this year.
+What we noticed here is that a lot of the data is difficult to model due to the size and the amount of different posts. What we can however see is that more recent comments seem to have a more negative compound sentiment value than comments from posts earlier this year.
 ```{r VADER}
 #vader_df <- vader_df(reddit_comments_df$comment)
 #write_as_csv(vader_df, "data_in/vader_reddit_comments")
@@ -896,11 +896,9 @@ dtm <- AssociatedPress[1:10,]
 
 result <- FindTopicsNumber(
   tidy_matrix,
-<<<<<<< Updated upstream
+
   topics = seq(from = 2, to = 30, by = 2),
-=======
-  topics = seq(from = 2, to = 5, by = 1),
->>>>>>> Stashed changes
+
   metrics = c("Griffiths2004", "CaoJuan2009", "Arun2010", "Deveaud2014"),
   method = "Gibbs",
   control = list(seed = 77),
