@@ -27,6 +27,7 @@ library(ggraph)
 library(widyr)
 library(qdapRegex)
 library(magick)
+library(lubridate)
 ```
 
 ```{r Fetching Tweets}
@@ -84,157 +85,6 @@ media_agency_df <- media_agency_df %>%
     text = str_replace_all(text, "#[a-z,A-Z]*", " "),
     text = str_replace_all(text, "@[a-z,A-Z]*", " ")
   )
-
-#most stop words are filtered based on the media agencies tag at the beginning of each Tweet. eg. WATCH: *headline follows*.
-agency_stop_words <-
-  tibble(
-    word = c(
-      "sabcnews",
-      "enca",
-      "dstv",
-      "sabckzn",
-      "maverick",
-      "opinionista",
-      "dm",
-      "scorpio",
-      "dstv403",
-      "itus",
-      "rt",
-      "amp",
-      "tgifood",
-      "mamelodi",
-      "sundowns",
-      "ofmagazineavailable",
-      "casablanca",
-      "oped",
-      "newsdeck",
-      "editorial",
-      "newflash",
-      "southafricanmorning",
-      "newslink",
-      "encas",
-      "southafricatonight",
-      "themiddayview",
-      "thelead",
-      "propertymatters",
-      "ba",
-      "ka",
-      "ya",
-      "ga",
-      "wa",
-      "le",
-      "kwa",
-      "morninglivesabc",
-      "monday",
-      "prix",
-      "azerbaijan",
-      "encasis",
-      "encabusiness",
-      "encasspeaks",
-      "south",
-      "africa",
-      "pm",
-      "sa",
-      "pm",
-      "encas",
-      "iss",
-      "icymi",
-      "timeslive",
-      "fullview",
-      "newsbreaksjul",
-      "newsbreakjul",
-      "sabc",
-      "nca",
-      "ncas",
-      "op",
-      "ig",
-      "ed",
-      "pl",
-      "news24",
-      "news24s",
-      "dm168",
-      "siness",
-      "usiness",
-      "ewsdeck",
-      "orld",
-      "sunday",
-      "friday",
-      "saturday",
-      "thursday",
-      "wednesday",
-      "monday",
-      "tuesday",
-      "pics",
-      "groundup",
-      "live"
-    )
-  )
-
-#tidy df and unnest
-tidy_media_df <- media_agency_df %>%
-  #filter(str_detect(text, fixed(covid_dictionary, ignore_case = TRUE))) %>%
-  unnest_tokens(word, text, token = "tweets") %>%
-  filter(
-    !word %in% stop_words$word,!word %in% agency_stop_words$word, 
-    !word %in% negated_words$word2, 
-    !word %in% str_remove_all(stop_words$word, "'"),
-    str_detect(word, "[a-z]")
-  )
-
-```
-
-From our tidied Tweet dataset, we look for the top words that appear. This will give us a good idea of what topics are being discussed the most. We find that COVID-19 has been the main topic of discussion. President appears second as President Ramaphosa of South Africa usually addresses the nation regarding COVID-19 information. Additionally, Zuma also appears as he is mentioned as "former president Zuma" in most articles. Zuma appears more as his recent court avoidance and sentencing is being Tweeted. General words surrounding the COVID-19 topic as it is still the main pressure on the country, especially involving Gauteng's rise in infections. 
-```{r top words}
-#top words
-top_words <- tidy_media_df %>%
-  anti_join(stop_words) %>%
-  count(word) %>%
-  arrange(desc(n))
-top_words %>%
-  slice(1:20) %>%
-  ggplot(aes(reorder(word,-n), n, fill = word)) +
-  geom_bar(stat = "identity") +
-  theme_minimal() +
-  theme(
-    axis.text.x = element_text(
-      angle = 60,
-      hjust = 1,
-      size = 13
-    ),
-    plot.title = element_text(hjust = 0.5, size = 18)
-  ) +
-  ylab("Frequency") +
-  xlab ("") +
-  ggtitle("Most frequent media agency tweets") +
-  guides(fill = FALSE)
-```
-
-After changing, adding, and removing terms from the filters, we can conclude that the tf-idf anaylsis is not useful for these media agencies. The selected media agencies post tables of covid data with different column names, or use unique names to categorize their Tweets. When tf-idf runs, it increases their term weights as they are "unique" because they are not found among other media agencies. These words are usually not telling. What it can tell us - which segments these media agencies post about the most.
-```{r tf-idf frequency per agency}
-#tf-idf
-tidy_media_tf_idf <- tidy_media_df %>%
-  select(screen_name, word) %>%
-  group_by(screen_name) %>%
-  count(word, screen_name) %>%
-  bind_tf_idf(word, screen_name, n)
-
-#calculate a frequency for each agency and word
-frequency <- tidy_media_tf_idf %>%
-  group_by(screen_name) %>%
-  count(word, sort = TRUE) %>%
-  left_join(tidy_media_df %>%
-              group_by(screen_name) %>%
-              summarise(total = n())) %>%
-  mutate(freq = n / total)
-
-tidy_media_tf_idf %>%
-  group_by(screen_name) %>%
-  slice_max(tf_idf, n = 15) %>%
-  ungroup() %>%
-  ggplot(aes(tf_idf, fct_reorder(word, tf_idf), fill = screen_name)) +
-  geom_col(show.legend = FALSE) +
-  facet_wrap(~ screen_name, ncol = 2, scales = "free") +
-  labs(x = "tf-idf", y = NULL)
 ```
 
 By modeling bigrams and trigrams for our dataset gives us a better understanding of what topic is being discussed with each word. We can then also see which sentiments are incorrectly labeled. "not good" gives better context of a negative sentiment, rather than it being incorrectly identified as positive good.
@@ -381,6 +231,190 @@ tidy_trigram_df %>%
   facet_wrap( ~ screen_name, ncol = 2, scales = "free") +
   labs(x = "tf-idf", y = NULL)
 
+```
+
+
+```{r Tidy, include=FALSE}
+#most stop words are filtered based on the media agencies tag at the beginning of each Tweet. eg. WATCH: *headline follows*.
+agency_stop_words <-
+  tibble(
+    word = c(
+      "sabcnews",
+      "enca",
+      "dstv",
+      "sabckzn",
+      "maverick",
+      "opinionista",
+      "dm",
+      "scorpio",
+      "dstv403",
+      "itus",
+      "rt",
+      "amp",
+      "tgifood",
+      "mamelodi",
+      "sundowns",
+      "ofmagazineavailable",
+      "casablanca",
+      "oped",
+      "newsdeck",
+      "editorial",
+      "newflash",
+      "southafricanmorning",
+      "newslink",
+      "encas",
+      "southafricatonight",
+      "themiddayview",
+      "thelead",
+      "propertymatters",
+      "ba",
+      "ka",
+      "ya",
+      "ga",
+      "wa",
+      "le",
+      "kwa",
+      "morninglivesabc",
+      "monday",
+      "prix",
+      "azerbaijan",
+      "encasis",
+      "encabusiness",
+      "encasspeaks",
+      "south",
+      "africa",
+      "pm",
+      "sa",
+      "pm",
+      "encas",
+      "iss",
+      "icymi",
+      "timeslive",
+      "fullview",
+      "newsbreaksjul",
+      "newsbreakjul",
+      "sabc",
+      "nca",
+      "ncas",
+      "op",
+      "ig",
+      "ed",
+      "pl",
+      "news24",
+      "news24s",
+      "dm168",
+      "siness",
+      "usiness",
+      "ewsdeck",
+      "orld",
+      "sunday",
+      "friday",
+      "saturday",
+      "thursday",
+      "wednesday",
+      "monday",
+      "tuesday",
+      "pics",
+      "groundup",
+      "live"
+    )
+  )
+
+#tidy df and unnest
+tidy_media_df <- media_agency_df %>%
+  #filter(str_detect(text, fixed(covid_dictionary, ignore_case = TRUE))) %>%
+  unnest_tokens(word, text, token = "tweets") %>%
+  filter(
+    !word %in% stop_words$word,!word %in% agency_stop_words$word, 
+    !word %in% negated_words$word2, 
+    !word %in% str_remove_all(stop_words$word, "'"),
+    str_detect(word, "[a-z]")
+  )
+
+```
+
+From our tidied Tweet dataset, we look for the top words that appear. This will give us a good idea of what topics are being discussed the most. We find that COVID-19 has been the main topic of discussion. President appears second as President Ramaphosa of South Africa usually addresses the nation regarding COVID-19 information. Additionally, Zuma also appears as he is mentioned as "former president Zuma" in most articles. Zuma appears more as his recent court avoidance and sentencing is being Tweeted. General words surrounding the COVID-19 topic as it is still the main pressure on the country, especially involving Gauteng's rise in infections. 
+```{r top words}
+#top words
+top_words <- tidy_media_df %>%
+  anti_join(stop_words) %>%
+  count(word) %>%
+  arrange(desc(n))
+top_words %>%
+  slice(1:20) %>%
+  ggplot(aes(reorder(word,-n), n, fill = word)) +
+  geom_bar(stat = "identity") +
+  theme_minimal() +
+  theme(
+    axis.text.x = element_text(
+      angle = 60,
+      hjust = 1,
+      size = 13
+    ),
+    plot.title = element_text(hjust = 0.5, size = 18)
+  ) +
+  ylab("Frequency") +
+  xlab ("") +
+  ggtitle("Most frequent media agency tweets") +
+  guides(fill = FALSE)
+```
+
+After changing, adding, and removing terms from the filters, we can conclude that the tf-idf anaylsis is not useful for these media agencies. The selected media agencies post tables of covid data with different column names, or use unique names to categorize their Tweets. When tf-idf runs, it increases their term weights as they are "unique" because they are not found among other media agencies. These words are usually not telling. What it can tell us - which segments these media agencies post about the most.
+```{r tf-idf}
+#tf-idf by user
+tidy_media_tf_idf <- tidy_media_df %>%
+  select(screen_name, word) %>%
+  group_by(screen_name) %>%
+  count(word, screen_name) %>%
+  bind_tf_idf(word, screen_name, n)
+
+#calculate a frequency for each agency and word
+frequency <- tidy_media_tf_idf %>%
+  group_by(screen_name) %>%
+  count(word, sort = TRUE) %>%
+  left_join(tidy_media_df %>%
+              group_by(screen_name) %>%
+              summarise(total = n())) %>%
+  mutate(freq = n / total)
+
+tidy_media_tf_idf %>%
+  group_by(screen_name) %>%
+  slice_max(tf_idf, n = 15) %>%
+  ungroup() %>%
+  ggplot(aes(tf_idf, fct_reorder(word, tf_idf), fill = screen_name)) +
+  geom_col(show.legend = FALSE) +
+  facet_wrap(~ screen_name, ncol = 2, scales = "free") +
+  labs(x = "tf-idf", y = NULL)
+
+#tf-idf week
+tidy_media_tf_idf_date <- tidy_media_df %>%
+  select(created_at, word) %>%
+  mutate(created_at = as.Date(created_at)) %>% 
+  group_by(created_at) %>%
+  count(word, created_at) %>%
+  bind_tf_idf(word, created_at, n)
+
+#calculate a frequency for each agency and word
+frequency <- tidy_media_tf_idf_date %>%
+  group_by(created_at) %>%
+  count(word, sort = TRUE) %>%
+  left_join(tidy_media_df %>%
+              group_by(created_at) %>%
+              summarise(total = n())) %>%
+  mutate(freq = n / total)
+
+tidy_media_tf_idf_date %>%
+  mutate(created_at = as.Date(created_at)) %>% 
+  mutate(created_at = week(created_at)) %>% 
+  group_by(created_at) %>%
+  slice_max(tf_idf, n = 10) %>%
+  ungroup() %>%
+  ggplot(aes(tf_idf, fct_reorder(word, tf_idf), fill = created_at)) +
+  geom_col(show.legend = FALSE) +
+  facet_wrap(~ created_at, ncol = 2, scales = "free") +
+  labs(x = "tf-idf", y = NULL)
+
+lubridate::week("2021-05-26")
 ```
 
 The graph below shows which words are most likely to co-occur. We use this to understand the context of words in our topic modelling.
@@ -581,10 +615,42 @@ interactions_plot <- ggplotly(
 image_read("images/interactions_plot.png")
 ```
 
-#Topic Modelling
-Our main topic influence is COVID-19 as this is what currently affects the country the most.
+# Topic Modelling
 
-##Covid & Business World News
+We determine the correct number of topics in mechanisms like the LDA (Latent Dirichlet Allocation) as they determine the quality of features of the words.
+
+A topic model is a type of statistic model for discovering the abstract "topics" that occur in a collection of documents.
+
+Topic modeling is used to classify and retrieve information. These models capture word correlations in a collection of textual documents with topics. It is very difficult to pick the right number of topics for a specific dataset. It is important to determine the value of 'k'.
+
+The importance of the value of 'k' is to ensure you do not over estimate or underestimate the data. If you over estimate it, you will be left with topics that carry very little meaning and if you under estimate the data, you will lose out on topics that could have been useful to your research.
+
+By looking at the lowest minimum and the highest maximum, we can determine the 'k'. This is how we have interpreted the graphs produced. Griffiths2004 is not informative in this situation and is therefore ignored.
+
+This method used has been proved to produce the best results of LDA without subjectively tuning the 'k' value.
+
+## Gap k justification
+```{r Gap k justify}
+library("ldatuning")
+library("topicmodels")
+
+data("AssociatedPress", package = "topicmodels")
+dtm <- AssociatedPress[1:10,]
+
+result <- FindTopicsNumber(
+  tidy_matrix,
+  topics = seq(from = 2, to = 30, by = 2),
+  metrics = c("Griffiths2004", "CaoJuan2009", "Arun2010", "Deveaud2014"),
+  method = "Gibbs",
+  control = list(seed = 77),
+  mc.cores = 2L,
+  verbose = TRUE
+)
+
+FindTopicsNumber_plot(result)
+```
+## Topics found
+Our main topic influence is COVID-19 as this is what currently affects the country the most.
 
 ```{r Topic Modelling}
 tidy_matrix <-
@@ -617,61 +683,69 @@ media_top_terms <- media_top_terms %>%
                values_to = "beta") %>%
   drop_na()
 
-  ggplot(aes(beta, term, fill = factor(topic))) +
+  ggplot(media_top_terms, aes(beta, term, fill = factor(topic))) +
   geom_col(show.legend = FALSE) +
   facet_wrap( ~ topic, scales = "free_y") +
   scale_y_reordered()
 ```
 
-```{r Topic Covid & Business World News}
+### Covid & Business World News
+These tweets include:
+- Businesses on Cape Town's iconic Long Street fear the latest lockdown will turn the stretch into a ghost town. Several businesses have been forced to adjust to the new, stricter regulations, while others have opted to remain closed for the duration.
+- 
 
+```{r Covid & Business World News}
+ggplot(media_top_terms %>% filter(topic == "Covid & Business World News"), aes(beta, term, fill = factor(topic))) +
+  geom_col(show.legend = FALSE) +
+  labs(
+    title = "Covid & Business World News"
+  ) +
+  scale_y_reordered()
+
+media_agency_df %>% select(text) %>% filter(str_detect(text, "business") == TRUE)
 ```
 
+### Legal News
 ```{r Legal News}
-
+ggplot(media_top_terms %>% filter(topic == "Legal News"), aes(beta, term, fill = factor(topic))) +
+  geom_col(show.legend = FALSE) +
+  labs(
+    title = "Legal News"
+  ) +
+  scale_y_reordered()
 ```
 
+### Former President Zuma facing court
 ```{r Former President Zuma facing court}
-
+ggplot(media_top_terms %>% filter(topic == "Former President Zuma facing court"), aes(beta, term, fill = factor(topic))) +
+  geom_col(show.legend = FALSE) +
+  labs(
+    title = "Former President Zuma facing court"
+  ) +
+  scale_y_reordered()
 ```
 
+### Minister News
 ```{r Minister News}
-
+ggplot(media_top_terms %>% filter(topic == "Minister News"), aes(beta, term, fill = factor(topic))) +
+  geom_col(show.legend = FALSE) +
+  labs(
+    title = "Minister News"
+  ) +
+  scale_y_reordered()
 ```
 
+### Nations Address
 ```{r Nations Address}
-
+ggplot(media_top_terms %>% filter(topic == "Nations Address"), aes(beta, term, fill = factor(topic))) +
+  geom_col(show.legend = FALSE) +
+  labs(
+    title = "Nations Address"
+  ) +
+  scale_y_reordered()
 ```
-We determine the correct number of topics in mechanisms like the LDA (Latent Dirichlet Allocation) as they determine the quality of features of the words.
 
-A topic model is a type of statistic model for discovering the abstract "topics" that occur in a collection of documents.
 
-Topic modeling is used to classify and retrieve information. These models capture word correlations in a collection of textual documents with topics. It is very difficult to pick the right number of topics for a specific dataset. It is important to determine the value of 'k'.
-
-The importance of the value of 'k' is to ensure you do not over estimate or underestimate the data. If you over estimate it, you will be left with topics that carry very little meaning and if you under estimate the data, you will lose out on topics that could have been useful to your research.
-
-By looking at the lowest minimum and the highest maximum, we can determine the 'k'. This is how we have interpreted the graphs produced. Griffiths2004 is not informative in this situation and is therefore ignored.
-
-This method used has been proved to produce the best results of LDA without having to manually tune the 'k' value.
-```{r Gap k justify}
-library("ldatuning")
-library("topicmodels")
-
-data("AssociatedPress", package = "topicmodels")
-dtm <- AssociatedPress[1:10,]
-
-result <- FindTopicsNumber(
-  tidy_matrix,
-  topics = seq(from = 2, to = 15, by = 1),
-  metrics = c("Griffiths2004", "CaoJuan2009", "Arun2010", "Deveaud2014"),
-  method = "Gibbs",
-  control = list(seed = 77),
-  mc.cores = 2L,
-  verbose = TRUE
-)
-
-FindTopicsNumber_plot(result)
-```
 
 #Additional Requirements
 ```{r}

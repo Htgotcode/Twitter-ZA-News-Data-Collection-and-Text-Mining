@@ -467,7 +467,7 @@ tidy_reddit_df <- reddit_comments_df %>%
   unnest_tokens(word, comment, token = "tweets") %>%
   filter(
     !word %in% stop_words$word,!word %in% agency_stop_words$word, 
-    !word %in% negated_words$word2, 
+    # !word %in% negated_words$word2, 
     !word %in% str_remove_all(stop_words$word, "'"),
     str_detect(word, "[a-z]")
   )
@@ -843,7 +843,7 @@ interactions_plot
 Our main topic influence is COVID-19 as this is what currently affects the country the most. We based our data collection around the word COVID-19 and expect to see a lot of inter related terms about it spread throughout the different topics. As you can see, due to the fact that the posts were all about Covid, the comments all inherited the overarching topic.
 ```{r Topic Modelling}
 tidy_matrix <-
-  tidy_reddit_df %>% sample(tidy_reddit_df, size=0.1) %>% count(author, word) %>% cast_dfm(author, word, n)
+  tidy_reddit_df %>% count(author, word) %>% cast_dfm(author, word, n)
 
 rcomments_lda <- LDA(tidy_matrix, k = 5, control = list(seed = 1234))
 
@@ -896,7 +896,7 @@ dtm <- AssociatedPress[1:10,]
 
 result <- FindTopicsNumber(
   tidy_matrix,
-  topics = seq(from = 2, to = 15, by = 1),
+  topics = seq(from = 2, to = 30, by = 2),
   metrics = c("Griffiths2004", "CaoJuan2009", "Arun2010", "Deveaud2014"),
   method = "Gibbs",
   control = list(seed = 77),
