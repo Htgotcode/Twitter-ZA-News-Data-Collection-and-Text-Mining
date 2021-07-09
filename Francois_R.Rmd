@@ -375,32 +375,32 @@ Then we tokenize the Tweets and remove stop words from tidytext and our own stop
 #created if more tweets could be accessed to be more topic specific
 # covid_dictionary <- c("herd", "immunity", "incubation", "job", "loss", "Kits", "lockdown", "mask", "N95", "outbreak", "pandemic", "quarantine", "recovery", "sanitiser", "transmission", "Underlying", "conditions", "Ventilators", "WHO", "xenophobia", "youTube", "zoonotic", "stay-at-home", "covid", "coronavirus", "hyrdoxychloroquine", "asymptomatic", "frontline", "virus", "self-isolation", "disinfectant", "shelter-in-place", "masks", "SARS-CoV-2", "ICU", "corona", "reopen", "distancing", "covering", "furlough", "tracer", "easing", "remdesivir", "mail-in", "hornet", "antibody", "in-person", "defund", "racism", "looting", "loot", "reopen", "two-metre", "pandemic", "looter", "distancing", "dexamethasone", "racial", "vaccine", "curfew","johnssons", "astrazeneca", "hospitals", "social-distance", "social-distancing", "police", "regulations", "symptoms", "testing", "positive-tests", "negative-tests" , "confirmed-cases", "restrictions", "deaths", "infected", "recoveries", "level", "jobs", "unemployed", "doctors", "infections", "sanitise", "sanitiser", "sanitisation", "containment")
 
-media_agency_df <- read_csv("data_in/media_agency_tweets.csv")
-media_agency_df <-
-  media_agency_df[, colSums(is.na(media_agency_df)) < nrow(media_agency_df)]
+reddit_comments_df <- read_csv("data_in/reddit_comments.csv")
+reddit_comments_df <-
+  reddit_comments_df[, colSums(is.na(reddit_comments_df)) < nrow(reddit_comments_df)]
 
 #JUST tidy
 rm_twitter_n_url <-
   rm_(pattern = pastex("@rm_twitter_url", "@rm_url"))
-media_agency_df <- media_agency_df %>%
+reddit_comments_df <- reddit_comments_df %>%
   mutate(
-    text = rm_twitter_n_url(text),
-    text = gsub("@\\w+", " ", text),
-    text = gsub("[[:punct:]]", " ", text),
-    text = gsub("[[:digit:]]", " ", text),
-    text = gsub("http\\w+", " ", text),
-    text = gsub("[ |\t]{2,}", " ", text),
-    text = gsub("^ ", " ", text),
-    text = gsub(" $", " ", text),
-    text = gsub("^BUSINESS", " ", text),
-    text = gsub("^World", " ", text)
+    comment = rm_twitter_n_url(comment),
+    comment = gsub("@\\w+", " ", comment),
+    comment = gsub("[[:punct:]]", " ", comment),
+    comment = gsub("[[:digit:]]", " ", comment),
+    comment = gsub("http\\w+", " ", comment),
+    comment = gsub("[ |\t]{2,}", " ", comment),
+    comment = gsub("^ ", " ", comment),
+    comment = gsub(" $", " ", comment),
+    comment = gsub("^BUSINESS", " ", comment),
+    comment = gsub("^World", " ", comment)
   ) %>%
   mutate(
-    text = str_replace_all(text, " ?(f|ht)(tp)(s?)(://)(.*)[.|/](.*)", " "),
-    text = str_replace_all(text, " ", " "),
-    text = str_replace_all(text, "RT @[a-z,A-Z]*: ", " "),
-    text = str_replace_all(text, "#[a-z,A-Z]*", " "),
-    text = str_replace_all(text, "@[a-z,A-Z]*", " ")
+    comment = str_replace_all(comment, " ?(f|ht)(tp)(s?)(://)(.*)[.|/](.*)", " "),
+    comment = str_replace_all(comment, " ", " "),
+    comment = str_replace_all(comment, "RT @[a-z,A-Z]*: ", " "),
+    comment = str_replace_all(comment, "#[a-z,A-Z]*", " "),
+    comment = str_replace_all(comment, "@[a-z,A-Z]*", " ")
   )
 
 #most stop words are filtered based on the media agencies tag at the beginning of each Tweet. eg. WATCH: *headline follows*.
@@ -488,9 +488,9 @@ agency_stop_words <-
   )
 
 #tidy df and unnest
-tidy_media_df <- media_agency_df %>%
+tidy_reddit_df <- reddit_comments_df %>%
   #filter(str_detect(text, fixed(covid_dictionary, ignore_case = TRUE))) %>%
-  unnest_tokens(word, text, token = "tweets") %>%
+  unnest_tokens(word, comment, token = "tweets") %>%
   filter(
     !word %in% stop_words$word,!word %in% agency_stop_words$word, 
     !word %in% negated_words$word2, 
@@ -529,39 +529,39 @@ top_words %>%
 After changing, adding, and removing terms from the filters, we can conclude that the tf-idf anaylsis is not useful for these media agencies. The selected media agencies post tables of covid data with different column names, or use unique names to categorize their Tweets. When tf-idf runs, it increases their term weights as they are "unique" because they are not found among other media agencies. These words are usually not telling. What it can tell us - which segments these media agencies post about the most.
 ```{r tf-idf frequency per agency}
 #tf-idf
-tidy_media_tf_idf <- tidy_media_df %>%
-  select(screen_name, word) %>%
-  group_by(screen_name) %>%
-  count(word, screen_name) %>%
-  bind_tf_idf(word, screen_name, n)
+tidy_reddit_tf_idf <- tidy_reddit_df %>%
+  select(author, word) %>%
+  group_by(author) %>%
+  count(word, author) %>%
+  bind_tf_idf(word, author, n)
 
 #calculate a frequency for each agency and word
-frequency <- tidy_media_tf_idf %>%
-  group_by(screen_name) %>%
+frequency <- tidy_reddit_tf_idf %>%
+  group_by(author) %>%
   count(word, sort = TRUE) %>%
-  left_join(tidy_media_df %>%
-              group_by(screen_name) %>%
+  left_join(tidy_reddit_df %>%
+              group_by(author) %>%
               summarise(total = n())) %>%
   mutate(freq = n / total)
 
-tidy_media_tf_idf %>%
-  group_by(screen_name) %>%
+tidy_reddit_tf_idf %>%
+  group_by(author) %>%
   slice_max(tf_idf, n = 15) %>%
   ungroup() %>%
-  ggplot(aes(tf_idf, fct_reorder(word, tf_idf), fill = screen_name)) +
+  ggplot(aes(tf_idf, fct_reorder(word, tf_idf), fill = author)) +
   geom_col(show.legend = FALSE) +
-  facet_wrap(~ screen_name, ncol = 2, scales = "free") +
+  facet_wrap(~ author, ncol = 2, scales = "free") +
   labs(x = "tf-idf", y = NULL)
 ```
 
 By modeling bigrams and trigrams for our dataset gives us a better understanding of what topic is being discussed with each word. We can then also see which sentiments are incorrectly labeled. "not good" gives better context of a negative sentiment, rather than it being incorrectly identified as positive good.
 ```{r bigrams}
 #bigrams
-tidy_bigram_df <- media_agency_df %>%
+tidy_bigram_df <- reddit_comments_df %>%
   #filter(str_detect(text, fixed(covid_dictionary, ignore_case = TRUE))) %>%
-  filter(!str_detect(text, "^RT")) %>%
-  mutate(text = gsub(" ?(f|ht)tp(s?)://(.*)[.][a-z]+", " ", text)) %>%
-  unnest_tokens(bigram, text, token = "ngrams", n = 2) %>%
+  filter(!str_detect(comment, "^RT")) %>%
+  mutate(comment = gsub(" ?(f|ht)tp(s?)://(.*)[.][a-z]+", " ", comment)) %>%
+  unnest_tokens(bigram, comment, token = "ngrams", n = 2) %>%
   separate(bigram, c("word1", "word2"), sep = " ")
 
 bigrams_filtered <- tidy_bigram_df %>%
@@ -577,17 +577,17 @@ bigrams_united <- bigrams_filtered %>%
 
 #tf-idf bigrams
 bigram_tf_idf <- bigrams_united %>%
-  count(screen_name, bigram) %>%
-  bind_tf_idf(bigram, screen_name, n) %>%
+  count(author, bigram) %>%
+  bind_tf_idf(bigram, author, n) %>%
   arrange(desc(tf_idf))
 
 bigram_tf_idf %>%
-  group_by(screen_name) %>%
+  group_by(author) %>%
   slice_max(tf_idf, n = 15) %>%
   ungroup() %>%
-  ggplot(aes(tf_idf, fct_reorder(bigram, tf_idf), fill = screen_name)) +
+  ggplot(aes(tf_idf, fct_reorder(bigram, tf_idf), fill = author)) +
   geom_col(show.legend = FALSE) +
-  facet_wrap( ~ screen_name, ncol = 2, scales = "free") +
+  facet_wrap( ~ author, ncol = 2, scales = "free") +
   labs(x = "tf-idf", y = NULL)
 
 #weights and graphs
@@ -702,16 +702,16 @@ tidy_trigram_df %>%
 
 The graph below shows which words are most likely to co-occur. We use this to understand the context of words in our topic modelling.
 ```{r Counting and correlating among sections, warning=FALSE}
-media_agency_section_words <- tidy_media_df %>%
+reddit_comments_section_words <- tidy_reddit_df %>%
   mutate(section = row_number() %/% 10) %>%
   filter(section > 0)
 
 # count words co-occuring within sections
-word_pairs <- media_agency_section_words %>%
+word_pairs <- reddit_comments_section_words %>%
   pairwise_count(word, section, sort = TRUE)
 
 # we need to filter for at least relatively common words first
-word_cors <- media_agency_section_words %>%
+word_cors <- reddit_comments_section_words %>%
   group_by(word) %>%
   filter(n() >= 20) %>%
   pairwise_cor(word, section, sort = TRUE)
@@ -746,26 +746,28 @@ word_cors %>%
 
 The general sentiment is mostly negative. News articles use negative headlines to get a faster reaction from people when skimming through news.
 ```{r VADER}
-# vader_df <- vader_df(media_agency_df$text)
-# write_as_csv(vader_df, "data_in/vader")
+#vader_df <- vader_df(reddit_comments_df$comment)
+#write_as_csv(vader_df, "data_in/vader_reddit_comments")
 
-vader_df <- read_csv("data_in/vader.csv")
+ 
+
+vader_df <- read_csv("data_in/vader_reddit_comments.csv")
 vader_df <- vader_df %>% mutate("X1" = row_number())
-media_agency_df <- media_agency_df %>% mutate("X1" = row_number())
-media_vader_df <- media_agency_df %>% left_join(vader_df, by = "X1")
+reddit_comments_df <- reddit_comments_df %>% mutate("X1" = row_number())
+reddit_comments_vader <- reddit_comments_df %>% left_join(vader_df, by = "X1")
 
 #General sentiment over time. Media agencies seem to have an even number of positive and negative tweets per day.
 ggplot(
-  media_vader_df %>%
-    mutate(created_at = as.Date(created_at)) %>%
-    group_by(created_at, screen_name) %>%
+  reddit_comments_vader %>%
+    mutate(post_date = as.Date(post_date)) %>%
+    group_by(post_date, author) %>%
     mutate(compound = replace(compound, is.na(compound), 0)) %>%
     summarise(sum_compound = sum(as.double(compound))),
-  aes(created_at, sum_compound, fill = screen_name)
+  aes(post_date, sum_compound, fill = author)
 ) +
   geom_bar(stat = "identity") +
   geom_smooth(method = "lm", na.rm = TRUE, se = FALSE) +
-  facet_wrap( ~ screen_name, scales = "free_x", ncol = 2) +
+  facet_wrap( ~ author, scales = "free_x", ncol = 2) +
   theme_minimal() +
   scale_y_continuous(expand = c(0, 0)) +
   scale_x_date(date_breaks = "3 day", date_labels = "%m-%d") +
@@ -782,12 +784,12 @@ ggplot(
 # Italy midfielder Jorginho said team glory is more important than any push to win a surprise Ballon d’Or award for the best player in world football after a teammate said he deserved it
 
 ggplot(
-  media_vader_df %>%
-    mutate(created_at = as.Date(created_at)) %>%
-    group_by(created_at) %>%
-    filter(screen_name == "eNCA") %>%
+  reddit_comments_vader %>%
+    mutate(post_date = as.Date(post_date)) %>%
+    group_by(post_date) %>%
+    filter(author == "angel_yellow_brick") %>%
     summarise(compound),
-  aes(created_at, compound)
+  aes(post_date, compound)
 ) +
   geom_bar(stat = "identity") +
   geom_smooth(method = "lm", na.rm = TRUE) +
@@ -795,21 +797,21 @@ ggplot(
   scale_y_continuous(expand = c(0, 0))
 
 #News sentiment
-media_vader_df %>%
-  mutate(created_at = as.Date(created_at)) %>%
-  group_by(created_at, screen_name) %>%
+reddit_comments_vader %>%
+  mutate(post_date = as.Date(post_date)) %>%
+  group_by(post_date, author) %>%
   summarise(compound) %>%
   arrange(desc(compound))
 
-ggplot(media_vader_df %>% arrange(compound) %>% mutate(X1 = factor(X1, levels = X1)),
+ggplot(reddit_comments_vader %>% arrange(compound) %>% mutate(X1 = factor(X1, levels = X1)),
        aes(x = X1)) +
   geom_point(mapping =  aes(y = compound)) +
   theme_minimal() +
   scale_y_continuous(expand = c(0, 0))
 
-media_vader_df %>%
-  mutate(created_at = as.Date(created_at)) %>%
-  group_by(created_at, screen_name) %>%
+reddit_comments_vader%>%
+  mutate(post_date = as.Date(post_date)) %>%
+  group_by(post_date, author) %>%
   mutate(compound = replace(compound, is.na(compound), 0)) %>%
   summarise(sum_compound = sum(as.double(compound)))
 ```
@@ -818,17 +820,17 @@ The plot below maps the average total interactions by day. From the relevant pea
 ```{r Interactions, echo=FALSE}
 # media_vader_df %>% select(favorite_count, retweet_count) %>% mutate(favorite_count + retweet_count)
 
-media_vader_df <- media_vader_df %>%
-  mutate(created_at = as.Date(created_at)) %>%
-  group_by(created_at) %>%
+reddit_comments_vader <- reddit_comments_vader %>%
+  mutate(post_date = as.Date(post_date)) %>%
+  group_by(post_date) %>%
   mutate(
-    retweet_daily = mean(retweet_count),
-    favorite_daily = mean(favorite_count),
-    total = mean(favorite_count + retweet_count)
+    retweet_daily = mean(num_comments),
+    favorite_daily = mean(comment_score),
+    total = mean(num_comments + comment_score)
   )
 # mean for the day
 interactions_plot <- ggplotly(
-  ggplot(data = media_vader_df, aes(created_at)) +
+  ggplot(data = reddit_comments_vader, aes(post_date)) +
     geom_ribbon(aes(
       ymin = 0, ymax = total, fill = "Total"
     )) +
@@ -858,7 +860,7 @@ interactions_plot <- ggplotly(
       plot.caption = element_text(face = "bold", hjust = 0),
     )
   ,
-  tooltip = c("total", "favorite_daily", "retweet_daily", "created_at")
+  tooltip = c("total", "favorite_daily", "retweet_daily", "post_date")
 )
 
 # peak tweets by day
