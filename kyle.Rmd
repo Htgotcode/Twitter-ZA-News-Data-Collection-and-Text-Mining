@@ -3,8 +3,6 @@ title: "R Notebook"
 output: html_notebook
 ---
 
-What tweets got the most attention.
-frequency of tweets posted on a topic
 
 
 ```{r SETUP}
@@ -41,7 +39,6 @@ media_agency_df <- media_agency_df %>%
 
 write_as_csv(media_agency_df, "data_in/media_agency_tweets")
 ```
-
 
 # Comparing Tweet Archives
 
@@ -168,6 +165,7 @@ agency_stop_words <-
       "monday",
       "tuesday",
       "pics",
+      "groundup",
       "live"
     )
   )
@@ -583,7 +581,11 @@ interactions_plot <- ggplotly(
 image_read("images/interactions_plot.png")
 ```
 
-Our main topic influence is COVID-19 as this is what currently affects the country the most. 
+#Topic Modelling
+Our main topic influence is COVID-19 as this is what currently affects the country the most.
+
+##Covid & Business World News
+
 ```{r Topic Modelling}
 tidy_matrix <-
   tidy_media_df %>% count(screen_name, word) %>% cast_dfm(screen_name, word, n)
@@ -598,26 +600,47 @@ media_top_terms <- media_topics %>%
   ungroup() %>%
   arrange(topic,-beta)
 
-media_top_terms %>%
+media_top_terms <- media_top_terms %>%
   mutate(term = reorder_within(term, beta, topic)) %>%
   pivot_wider(id_cols = term,
               names_from = topic,
               values_from = beta) %>%
   rename(
     "Legal News" = 2,
-    "Former President Zuma facing court" = 3,
-    "Nations Address" = 4,
-    "Covid & Business World News" = 5,
-    "Minister News" = 6
+    "Covid & Business World News" = 3,
+    "Former President Zuma facing court" = 4,
+    "Minister News" = 5,
+    "Nations Address" = 6
   ) %>%
   pivot_longer(cols = c(2, 3, 4, 5, 6),
                names_to = "topic",
                values_to = "beta") %>%
-  drop_na() %>%
+  drop_na()
+
   ggplot(aes(beta, term, fill = factor(topic))) +
   geom_col(show.legend = FALSE) +
-  facet_wrap( ~ topic, scales = "free") +
+  facet_wrap( ~ topic, scales = "free_y") +
   scale_y_reordered()
+```
+
+```{r Topic Covid & Business World News}
+
+```
+
+```{r Legal News}
+
+```
+
+```{r Former President Zuma facing court}
+
+```
+
+```{r Minister News}
+
+```
+
+```{r Nations Address}
+
 ```
 We determine the correct number of topics in mechanisms like the LDA (Latent Dirichlet Allocation) as they determine the quality of features of the words.
 
@@ -627,7 +650,7 @@ Topic modeling is used to classify and retrieve information. These models captur
 
 The importance of the value of 'k' is to ensure you do not over estimate or underestimate the data. If you over estimate it, you will be left with topics that carry very little meaning and if you under estimate the data, you will lose out on topics that could have been useful to your research.
 
-By looking at the lowest minimum and the highest maximum, we can determine the 'k'. This is how we have interpreted the graphs produced. Griffiths2004 is not informative in this situation and is therefore ignore
+By looking at the lowest minimum and the highest maximum, we can determine the 'k'. This is how we have interpreted the graphs produced. Griffiths2004 is not informative in this situation and is therefore ignored.
 
 This method used has been proved to produce the best results of LDA without having to manually tune the 'k' value.
 ```{r Gap k justify}
@@ -650,7 +673,11 @@ result <- FindTopicsNumber(
 FindTopicsNumber_plot(result)
 ```
 
+#Additional Requirements
 ```{r}
 library(RedditExtractoR)
 RedditExtractoR::reddit_urls(search_terms = "Covid", subreddit = "southafrica")
+
+comments<- get_reddit(search_terms = "Covid-19", subreddit = "southafrica", page_threshold = 10,
+                      sort_by = "comments" )
 ```
