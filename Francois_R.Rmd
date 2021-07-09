@@ -651,7 +651,10 @@ word_pairs <- reddit_comments_section_words %>%
 word_cors <- reddit_comments_section_words %>%
   group_by(word) %>%
   filter(n() >= 20) %>%
-  pairwise_cor(word, section, sort = TRUE)
+  pairwise_cor(word, section, sort = TRUE)%>%
+  filter(correlation>=.05)
+   
+  
 
 # Correlation of next word
 # word_cors %>%
@@ -666,11 +669,11 @@ word_cors %>%
   ggplot(aes(item2, correlation)) +
   geom_bar(stat = "identity") +
   facet_wrap( ~ item1, scales = "free") +
-  coord_flip()
+  coord_flip() 
+  
 
 set.seed(1234)
 word_cors %>%
-  filter(correlation > .65) %>%
   graph_from_data_frame() %>%
   ggraph(layout = "fr") +
   geom_edge_link(aes(edge_alpha = correlation),
@@ -717,8 +720,7 @@ ggplot(
     panel.grid.minor.y = element_blank(),
     panel.grid.minor.x = element_blank(),
   )
-# An illegal gold miner who was severely injured in a clash in which four other illegal miners were killed has been charged for their murders Mpumalanga police said on Thursday
-# Italy midfielder Jorginho said team glory is more important than any push to win a surprise Ballon d’Or award for the best player in world football after a teammate said he deserved it
+
 
 ggplot(
   reddit_comments_vader %>%
@@ -747,7 +749,7 @@ ggplot(reddit_comments_vader %>% arrange(compound) %>% mutate(X1 = factor(X1, le
   scale_y_continuous(expand = c(0, 0))
 
 reddit_comments_vader%>%
-  mutate(post_date = as.Date(post_date)) %>%
+  mutate(post_date = as.Date(post_date, format = "%d-%m-%y")) %>%
   group_by(post_date, author) %>%
   mutate(compound = replace(compound, is.na(compound), 0)) %>%
   summarise(sum_compound = sum(as.double(compound)))
@@ -758,7 +760,7 @@ The plot below maps the average total comments on a post per day.
 # media_vader_df %>% select(favorite_count, retweet_count) %>% mutate(favorite_count + retweet_count)
 
 reddit_comments_vader <- reddit_comments_vader %>%
-  mutate(post_date = as.Date(post_date)) %>%
+  mutate(post_date = as.Date(post_date, format = "%d-%m-%y")) %>%
   group_by(post_date) %>%
   mutate(
     retweet_daily = mean(num_comments),
@@ -772,10 +774,10 @@ interactions_plot <- ggplotly(
       ymin = 0, ymax = total, fill = "Total"
     )) +
     geom_ribbon(aes(
-      ymin = 0, ymax = favorite_daily, fill = "Favorites"
+      ymin = 0, ymax = favorite_daily, fill = "Comment_score"
     )) +
     geom_ribbon(aes(
-      ymin = 0, ymax = retweet_daily, fill = "Retweets"
+      ymin = 0, ymax = retweet_daily, fill = "Number ofComments"
     )) +
     theme(
       axis.title.x = element_blank(),
@@ -835,12 +837,13 @@ interactions_plot <- ggplotly(
 # @SABCNews: BREAKING NEWS: King of Eswatini has fled amid public violence in the country.
 
 #image_read("images/interactions_plot.png")
+interactions_plot
 ```
 
 Our main topic influence is COVID-19 as this is what currently affects the country the most. We based our data collection around the word COVID-19 and expect to see a lot of inter related terms about it spread throughout the different topics. As you can see, due to the fact that the posts were all about Covid, the comments all inherited the overarching topic.
 ```{r Topic Modelling}
 tidy_matrix <-
-  tidy_reddit_df %>% count(author, word) %>% cast_dfm(author, word, n)
+  tidy_reddit_df %>% sample(tidy_reddit_df, size=0.1) %>% count(author, word) %>% cast_dfm(author, word, n)
 
 rcomments_lda <- LDA(tidy_matrix, k = 5, control = list(seed = 1234))
 
