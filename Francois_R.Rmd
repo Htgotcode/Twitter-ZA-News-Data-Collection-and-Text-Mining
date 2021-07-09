@@ -319,8 +319,51 @@ As can be seen from the graph the sentiment of the posts started out more negati
 
 
 
-Attempt at r/NEWS
+Attempt at Facebook
 ```{r}
-reddit_covid_news<- RedditExtractoR::reddit_urls(search_terms = "South Africa", subreddit = "news",page_threshold = 10)
+###############################################################################################
+##                                                                                           ##
+##           Setup                                                                           ##
+##                                                                                           ##
+###############################################################################################
+
+# install.packages("Rfacebook")  # from CRAN
+# install.packages("Rook")  # from CRAN
+# install.packages("igraph") # from CRAN
+
+library(Rfacebook)
+library(Rook)
+library(igraph)
+library(gtools)
+library(reshape)
+library(lubridate)
+library(ggplot2)
+library(scales)
+
+#from https://developers.facebook.com/apps - setup an app and copy the stuff below
+
+
+#now we have our fb_oauth connection
+#so we will just save them to be able to use them later
+save(fb_oauth, file="fb_oauth")
+ 
+#so if you want to connect to Facebook again you just have to call
+  load("fb_oauth")
+
 ```
 
+Facebook updated their permissions stuff so unable to gain access unless we could prove that we are a registered business. :(
+```{r}
+#from https://developers.facebook.com/apps - setup an app and copy the stuff below
+
+#now we have our fb_oauth connection
+#so we will just save them to be able to use them later
+save(fb_oauth, file="fb_oauth")
+ 
+#so if you want to connect to Facebook again you just have to call
+  load("fb_oauth")
+  
+
+cvd<- getPage("COVID-19-Information-Center", fb_oauth, n=5000)
+```
+Find new source
