@@ -500,7 +500,7 @@ top_words %>%
   guides(fill = FALSE)
 ```
 
-After changing, adding, and removing terms from the filters, we can conclude that the tf-idf anaylsis is not useful for these comments. The simple amount of comment data per post and the fact that the time frames are sporadic make that you are unable to . When tf-idf runs, it increases their term weights as they are "unique" because they are not found among other media agencies. These words are usually not telling. What it can tell us - which segments these media agencies post about the most.
+After changing, adding, and removing terms from the filters, we can conclude that the tf-idf anaylsis is not useful for these comments. The simple amount of comment data per post and the fact that the time frames are sporadic make that you are unable to . When tf-idf runs, it increases their term weights as they are "unique" because they are not found among other media agencies. These words are usually not telling. What it can tell us is which segments these media agencies post about the most. With the size of the dataframe we used the visualisation is too compressed to currently make use of it when viewed in R.
 ```{r tf-idf frequency per post}
 #tf-idf
 tidy_reddit_tf_idf <- tidy_reddit_df %>%
@@ -637,7 +637,7 @@ negated_words %>%
 ```
 
 
-The graph below shows which words are most likely to co-occur. We use this to understand the context of words in our topic modelling.
+The graph below shows which words are most likely to co-occur. We use this to understand the context of words in our topic modelling. From the results we can see that some of the word used is much more popular and common among users who comment on the posts.
 ```{r Counting and correlating among sections, warning=FALSE}
 reddit_comments_section_words <- tidy_reddit_df %>%
   mutate(section = row_number() %/% 10) %>%
@@ -845,7 +845,7 @@ Our main topic influence is COVID-19 as this is what currently affects the count
 tidy_matrix <-
   tidy_reddit_df %>% count(author, word) %>% cast_dfm(author, word, n)
 
-rcomments_lda <- LDA(tidy_matrix, k = 5, control = list(seed = 1234))
+rcomments_lda <- LDA(tidy_matrix, k = 18, control = list(seed = 1234))
 
 rcomments_topics <- tidy(rcomments_lda, matrix = "beta")
 
@@ -896,7 +896,11 @@ dtm <- AssociatedPress[1:10,]
 
 result <- FindTopicsNumber(
   tidy_matrix,
+<<<<<<< Updated upstream
   topics = seq(from = 2, to = 30, by = 2),
+=======
+  topics = seq(from = 2, to = 5, by = 1),
+>>>>>>> Stashed changes
   metrics = c("Griffiths2004", "CaoJuan2009", "Arun2010", "Deveaud2014"),
   method = "Gibbs",
   control = list(seed = 77),
