@@ -251,11 +251,6 @@ covid_dictionary <- c("herd", "immunity", "incubation", "job", "loss", "Kits", "
 
 
 ```{r}
-install.packages("XML")
-install.packages("RCurl")
-install.packages("RColorBrewer")
-install.packages("wordcloud")
-
 library(XML)
 library(RCurl)
 library(RColorBrewer)
@@ -266,6 +261,7 @@ Setting up Reddit scraper
 Kyle's Reddit code that he graciously gave to me :)
 I attempted 2 other reddit web scraping methods for scraping comments from post but they were unsuccessful. We settled instead to just focus on the posts themselves about Covid-19 in South Africa.
 By scraping the r/southafrica subreddit we managed to find about 250 posts dating back to last year December which would be from when South Africa was entering harder lockdown times again. We expect that due to the fact that this is the post themselves and not the comment sof people that the sentiment would be close to neutral or will have tendencies to return to neutral if it deviates from it. We will be making use of a 7 day rolling average  to see the sentiment of the reddit posts as well a smooth graph to see the tendency of the posts sentiment over time.
+We managed to get the comments as well and run analysis on them.
 ```{r}
 library(RedditExtractoR)
 
@@ -322,8 +318,7 @@ title: "R Notebook"
 output: html_notebook
 ---
 
-What tweets got the most attention.
-frequency of tweets posted on a topic
+The Reddit hole of comments. All who enter, beware!
 
 
 ```{r SETUP}
@@ -350,7 +345,7 @@ library(qdapRegex)
 library(magick)
 ```
 
-```{r Fetching Tweets}
+```{r Fetching Reddit Comments}
 
 comments<- get_reddit(search_terms = "Covid-19", subreddit = "southafrica", page_threshold = 5,
                       sort_by = "new")
@@ -903,19 +898,19 @@ image_read("images/interactions_plot.png")
 Our main topic influence is COVID-19 as this is what currently affects the country the most. 
 ```{r Topic Modelling}
 tidy_matrix <-
-  tidy_media_df %>% count(screen_name, word) %>% cast_dfm(screen_name, word, n)
+  tidy_reddit_df %>% count(author, word) %>% cast_dfm(author, word, n)
 
-media_lda <- LDA(tidy_matrix, k = 5, control = list(seed = 1234))
+rcomments_lda <- LDA(tidy_matrix, k = 5, control = list(seed = 1234))
 
-media_topics <- tidy(media_lda, matrix = "beta")
+rcomments_topics <- tidy(rcomments_lda, matrix = "beta")
 
-media_top_terms <- media_topics %>%
+rcomments_top_terms <- rcomments_topics %>%
   group_by(topic) %>%
   slice_max(beta, n = 10) %>%
   ungroup() %>%
   arrange(topic,-beta)
 
-media_top_terms %>%
+rcomments_top_terms %>%
   mutate(term = reorder_within(term, beta, topic)) %>%
   pivot_wider(id_cols = term,
               names_from = topic,
@@ -967,10 +962,7 @@ result <- FindTopicsNumber(
 FindTopicsNumber_plot(result)
 ```
 
-```{r}
-library(RedditExtractoR)
-RedditExtractoR::reddit_urls(search_terms = "Covid", subreddit = "southafrica")
-```
+
 
 
 
