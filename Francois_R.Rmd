@@ -500,7 +500,7 @@ top_words %>%
   guides(fill = FALSE)
 ```
 
-After changing, adding, and removing terms from the filters, we can conclude that the tf-idf anaylsis is not useful for these comments. The simple amount of comment data per post and the fact that the time frames are sporadic make that you are unable to . When tf-idf runs, it increases their term weights as they are "unique" because they are not found among other media agencies. These words are usually not telling. What it can tell us - which segments these media agencies post about the most.
+After changing, adding, and removing terms from the filters, we can conclude that the tf-idf anaylsis is not useful for these comments. The simple amount of comment data per post and the fact that the time frames are sporadic make that you are unable to . When tf-idf runs, it increases their term weights as they are "unique" because they are not found among other media agencies. These words are usually not telling. What it can tell us is which segments these media agencies post about the most. With the size of the dataframe we used the visualisation is too compressed to currently make use of it when viewed in R.
 ```{r tf-idf frequency per post}
 #tf-idf
 tidy_reddit_tf_idf <- tidy_reddit_df %>%
@@ -637,7 +637,7 @@ negated_words %>%
 ```
 
 
-The graph below shows which words are most likely to co-occur. We use this to understand the context of words in our topic modelling.
+The graph below shows which words are most likely to co-occur. We use this to understand the context of words in our topic modelling. From the results we can see that some of the word used is much more popular and common among users who comment on the posts.
 ```{r Counting and correlating among sections, warning=FALSE}
 reddit_comments_section_words <- tidy_reddit_df %>%
   mutate(section = row_number() %/% 10) %>%
@@ -684,7 +684,7 @@ word_cors %>%
   theme_void()
 ```
 
-What we noticed here is that alot of the data is difficult to model due to the size and the amount of different posts. What we can however see is that more recent tweets seem to have a more negative compound sentiment value than tweets from earlier this year.
+What we noticed here is that a lot of the data is difficult to model due to the size and the amount of different posts. What we can however see is that more recent comments seem to have a more negative compound sentiment value than comments from posts earlier this year.
 ```{r VADER}
 #vader_df <- vader_df(reddit_comments_df$comment)
 #write_as_csv(vader_df, "data_in/vader_reddit_comments")
@@ -896,7 +896,9 @@ dtm <- AssociatedPress[1:10,]
 
 result <- FindTopicsNumber(
   tidy_matrix,
+
   topics = seq(from = 2, to = 30, by = 2),
+
   metrics = c("Griffiths2004", "CaoJuan2009", "Arun2010", "Deveaud2014"),
   method = "Gibbs",
   control = list(seed = 77),
