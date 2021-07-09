@@ -2,10 +2,15 @@
 title: "R Notebook"
 output: html_notebook
 ---
+# Background
+South Africa has seen an increase in COVID-19 recently and that has been labelled the third wave. The statistic of a third wave has moved the country into another level 4 lockdown. The news on statistics and general COVID-19 related happenings in South Africa are usually reported by their media agencies. The media agencies use many platforms online to repost their articles such as websites and mobile apps. Twitter is a platform where they can post their headline with a link to the article. Using sentiment analysis and topic modelling, we will compare how sentiment and topics have changed over time and how they compare to other media agencies.
 
+# Analysis Process
+Twitter posts will be extracted using the “rtweet” package for the programming language “R”. By using the get_timeline method in the package we can extract the latest 3200 Tweets from a specific user without premium. In this case, the users will be a selection of top South African media agencies. 3200 Tweets will give us 2 months’ worth of data per media agency. Relevant COVID-19 Tweets will be extracted from that data. JUSTIFY NEWS. We use VADER to conduct sentiment analysis on the Tweets extracted. We choose VADER over sentimentR, as VADER has been academically proven to provide a more accurate sentiment on Tweets. VADER will give us a positive, negative, neutral, and compound metric on the Tweet. Compound is the Tweets overall sentiment. 
+We then conducted topic modelling using LDA. 
+Most of our process comes from working through [Text Mining with R](https://www.tidytextmining.com/)
 
-
-```{r SETUP}
+```{r SETUP, warning=FALSE, include=FALSE}
 library(rtweet)
 library(ggplot2)
 library(tidyr)
@@ -28,23 +33,24 @@ library(widyr)
 library(qdapRegex)
 library(magick)
 library(lubridate)
+library(forecast)
 ```
 
-```{r Fetching Tweets}
-media_agency_df <- get_timeline("News24", n = 3200)
-media_agency_df <- media_agency_df %>%
-  bind_rows(get_timeline("eNCA", n = 3200)) %>%
-  bind_rows(get_timeline("TimesLIVE", n = 3200)) %>%
-  bind_rows(get_timeline("SABCNews", n = 3200)) %>%
-  bind_rows(get_timeline("dailymaverick", n = 3200))
-
-write_as_csv(media_agency_df, "data_in/media_agency_tweets")
+```{r Fetching Tweets, warning=FALSE, include=FALSE}
+# media_agency_df <- get_timeline("News24", n = 3200)
+# media_agency_df <- media_agency_df %>%
+#   bind_rows(get_timeline("eNCA", n = 3200)) %>%
+#   bind_rows(get_timeline("TimesLIVE", n = 3200)) %>%
+#   bind_rows(get_timeline("SABCNews", n = 3200)) %>%
+#   bind_rows(get_timeline("dailymaverick", n = 3200))
+# 
+# write_as_csv(media_agency_df, "data_in/media_agency_tweets")
 ```
 
 # Comparing Tweet Archives
 
 Some tweets fetched date further back. The 3200 tweet pull per user causes this. It tells us that agencies like News24 and SABC News Tweet more daily than Daily Maverick.
-```{r}
+```{r echo=FALSE, warning=FALSE}
 ggplot(media_agency_df, aes(x = created_at, fill = screen_name)) +
   geom_histogram(position = "identity",
                  bins = 20,
@@ -53,8 +59,7 @@ ggplot(media_agency_df, aes(x = created_at, fill = screen_name)) +
 ```
 
 We first clean the original text to remove links, punctuation, digits, links, @'s.
-Then we tokenize the Tweets and remove stop words from tidytext and our own stopword dictionary. We also use the "twitter" token to handle any left over @'s and URLS.
-```{r Clean up, include=FALSE}
+```{r Clean up, warning=FALSE, include=FALSE}
 #created if more tweets could be accessed to be more topic specific
 # covid_dictionary <- c("herd", "immunity", "incubation", "job", "loss", "Kits", "lockdown", "mask", "N95", "outbreak", "pandemic", "quarantine", "recovery", "sanitiser", "transmission", "Underlying", "conditions", "Ventilators", "WHO", "xenophobia", "youTube", "zoonotic", "stay-at-home", "covid", "coronavirus", "hyrdoxychloroquine", "asymptomatic", "frontline", "virus", "self-isolation", "disinfectant", "shelter-in-place", "masks", "SARS-CoV-2", "ICU", "corona", "reopen", "distancing", "covering", "furlough", "tracer", "easing", "remdesivir", "mail-in", "hornet", "antibody", "in-person", "defund", "racism", "looting", "loot", "reopen", "two-metre", "pandemic", "looter", "distancing", "dexamethasone", "racial", "vaccine", "curfew","johnssons", "astrazeneca", "hospitals", "social-distance", "social-distancing", "police", "regulations", "symptoms", "testing", "positive-tests", "negative-tests" , "confirmed-cases", "restrictions", "deaths", "infected", "recoveries", "level", "jobs", "unemployed", "doctors", "infections", "sanitise", "sanitiser", "sanitisation", "containment")
 
@@ -88,7 +93,7 @@ media_agency_df <- media_agency_df %>%
 ```
 
 By modeling bigrams and trigrams for our dataset gives us a better understanding of what topic is being discussed with each word. We can then also see which sentiments are incorrectly labeled. "not good" gives better context of a negative sentiment, rather than it being incorrectly identified as positive good.
-```{r bigrams}
+```{r bigrams, warning=FALSE, include=FALSE}
 #bigrams
 tidy_bigram_df <- media_agency_df %>%
   #filter(str_detect(text, fixed(covid_dictionary, ignore_case = TRUE))) %>%
@@ -146,7 +151,7 @@ ggraph(bigram_graph, layout = "fr") +
 ```
 
 We give more weight to words that appear more often with the incorrect sentiment. We can now reverse the sentiment of these words once VADER has been run on the dataset.
-```{r negation words}
+```{r negation words, warning=FALSE, include=FALSE}
 #vader lexicon imported from VADER GitHub
 vader_lexicon <- read_csv2("data_in/vader_lexicon.csv") %>%
   rename("word" = TOKEN, "value" = `MEAN-SENTIMENT-RATING`)
@@ -196,7 +201,7 @@ negated_words %>%
 ```
 
 Trigrams were modeled but were not necessary as bigrams provided enough information
-```{r trigrams}
+```{r trigrams, eval=FALSE, warning=FALSE, include=FALSE}
 #trigrams
 tidy_trigram_df <- media_agency_df %>%
   filter(!str_detect(text, "^RT")) %>%
@@ -233,8 +238,8 @@ tidy_trigram_df %>%
 
 ```
 
-
-```{r Tidy, include=FALSE}
+We tokenize the Tweets and remove stop words in tidytext, our own stopword dictionary, and negation word dictionary. We also use the "twitter" token to handle any left over @'s and URLS.
+```{r Tidy, echo=FALSE, warning=FALSE}
 #most stop words are filtered based on the media agencies tag at the beginning of each Tweet. eg. WATCH: *headline follows*.
 agency_stop_words <-
   tibble(
@@ -334,7 +339,7 @@ tidy_media_df <- media_agency_df %>%
 ```
 
 From our tidied Tweet dataset, we look for the top words that appear. This will give us a good idea of what topics are being discussed the most. We find that COVID-19 has been the main topic of discussion. President appears second as President Ramaphosa of South Africa usually addresses the nation regarding COVID-19 information. Additionally, Zuma also appears as he is mentioned as "former president Zuma" in most articles. Zuma appears more as his recent court avoidance and sentencing is being Tweeted. General words surrounding the COVID-19 topic as it is still the main pressure on the country, especially involving Gauteng's rise in infections. 
-```{r top words}
+```{r top words, echo=FALSE, warning=FALSE}
 #top words
 top_words <- tidy_media_df %>%
   anti_join(stop_words) %>%
@@ -360,7 +365,7 @@ top_words %>%
 ```
 
 After changing, adding, and removing terms from the filters, we can conclude that the tf-idf anaylsis is not useful for these media agencies. The selected media agencies post tables of covid data with different column names, or use unique names to categorize their Tweets. When tf-idf runs, it increases their term weights as they are "unique" because they are not found among other media agencies. These words are usually not telling. What it can tell us - which segments these media agencies post about the most.
-```{r tf-idf}
+```{r tf-idf, eval=FALSE, warning=FALSE, include=FALSE}
 #tf-idf by user
 tidy_media_tf_idf <- tidy_media_df %>%
   select(screen_name, word) %>%
@@ -402,22 +407,18 @@ frequency <- tidy_media_tf_idf_date %>%
               group_by(created_at) %>%
               summarise(total = n())) %>%
   mutate(freq = n / total)
-
 tidy_media_tf_idf_date %>%
-  mutate(created_at = as.Date(created_at)) %>% 
-  mutate(created_at = week(created_at)) %>% 
+  mutate(created_at = week(as.Date(created_at))) %>% 
   group_by(created_at) %>%
   slice_max(tf_idf, n = 10) %>%
   ungroup() %>%
   ggplot(aes(tf_idf, fct_reorder(word, tf_idf), fill = created_at)) +
-  geom_col(show.legend = FALSE) +
+  geom_col(show.legend = FALSE) + 
   facet_wrap(~ created_at, ncol = 2, scales = "free") +
   labs(x = "tf-idf", y = NULL)
-
-lubridate::week("2021-05-26")
 ```
 
-The graph below shows which words are most likely to co-occur. We use this to understand the context of words in our topic modelling.
+The graph below shows which words are most likely to co-occur. We use this to understand the context of words in our topic modeling.
 ```{r Counting and correlating among sections, warning=FALSE}
 media_agency_section_words <- tidy_media_df %>%
   mutate(section = row_number() %/% 10) %>%
@@ -462,7 +463,7 @@ word_cors %>%
 ```
 
 The general sentiment is mostly negative. News articles use negative headlines to get a faster reaction from people when skimming through news.
-```{r VADER}
+```{r VADER, echo=FALSE, warning=FALSE}
 # vader_df <- vader_df(media_agency_df$text)
 # write_as_csv(vader_df, "data_in/vader")
 
@@ -532,7 +533,7 @@ media_vader_df %>%
 ```
 
 The plot below maps the average total interactions by day. From the relevant peaks, we extract the top tweet in that day. 
-```{r Interactions, echo=FALSE}
+```{r Interactions, echo=FALSE, warning=FALSE}
 # media_vader_df %>% select(favorite_count, retweet_count) %>% mutate(favorite_count + retweet_count)
 
 media_vader_df <- media_vader_df %>%
@@ -630,29 +631,30 @@ By looking at the lowest minimum and the highest maximum, we can determine the '
 This method used has been proved to produce the best results of LDA without subjectively tuning the 'k' value.
 
 ## Gap k justification
-```{r Gap k justify}
-library("ldatuning")
-library("topicmodels")
-
-data("AssociatedPress", package = "topicmodels")
-dtm <- AssociatedPress[1:10,]
-
-result <- FindTopicsNumber(
-  tidy_matrix,
-  topics = seq(from = 2, to = 30, by = 2),
-  metrics = c("Griffiths2004", "CaoJuan2009", "Arun2010", "Deveaud2014"),
-  method = "Gibbs",
-  control = list(seed = 77),
-  mc.cores = 2L,
-  verbose = TRUE
-)
+```{r Gap k justify, echo=FALSE, warning=FALSE}
+# library("ldatuning")
+# library("topicmodels")
+# 
+# data("AssociatedPress", package = "topicmodels")
+# dtm <- AssociatedPress[1:10,]
+# 
+# result <- FindTopicsNumber(
+#   tidy_matrix,
+#   topics = seq(from = 2, to = 30, by = 2),
+#   metrics = c("Griffiths2004", "CaoJuan2009", "Arun2010", "Deveaud2014"),
+#   method = "Gibbs",
+#   control = list(seed = 77),
+#   mc.cores = 2L,
+#   verbose = TRUE
+# )
 
 FindTopicsNumber_plot(result)
 ```
+
 ## Topics found
 Our main topic influence is COVID-19 as this is what currently affects the country the most.
 
-```{r Topic Modelling}
+```{r Topic Modelling, echo=FALSE, warning=FALSE}
 tidy_matrix <-
   tidy_media_df %>% count(screen_name, word) %>% cast_dfm(screen_name, word, n)
 
@@ -690,68 +692,43 @@ media_top_terms <- media_top_terms %>%
 ```
 
 ### Covid & Business World News
-These tweets include:
-- Businesses on Cape Town's iconic Long Street fear the latest lockdown will turn the stretch into a ghost town. Several businesses have been forced to adjust to the new, stricter regulations, while others have opted to remain closed for the duration.
-- 
-
-```{r Covid & Business World News}
-ggplot(media_top_terms %>% filter(topic == "Covid & Business World News"), aes(beta, term, fill = factor(topic))) +
-  geom_col(show.legend = FALSE) +
-  labs(
-    title = "Covid & Business World News"
-  ) +
-  scale_y_reordered()
-
-media_agency_df %>% select(text) %>% filter(str_detect(text, "business") == TRUE)
+These tweets include (beta > 0.005):
+```{r Covid & Business World News, echo=FALSE, warning=FALSE}
+media_agency_df %>% select(text) %>% filter(str_detect(text, "business | covid | citizen") == TRUE)
 ```
 
 ### Legal News
-```{r Legal News}
-ggplot(media_top_terms %>% filter(topic == "Legal News"), aes(beta, term, fill = factor(topic))) +
-  geom_col(show.legend = FALSE) +
-  labs(
-    title = "Legal News"
-  ) +
-  scale_y_reordered()
+These tweets include (beta > 0.0075):
+```{r Legal News, echo=FALSE, warning=FALSE}
+media_agency_df %>% select(text) %>% filter(str_detect(text, "covid") == TRUE)
 ```
 
 ### Former President Zuma facing court
-```{r Former President Zuma facing court}
-ggplot(media_top_terms %>% filter(topic == "Former President Zuma facing court"), aes(beta, term, fill = factor(topic))) +
-  geom_col(show.legend = FALSE) +
-  labs(
-    title = "Former President Zuma facing court"
-  ) +
-  scale_y_reordered()
+These tweets include ("zuma | court"):
+```{r Former President Zuma facing court, echo=FALSE, warning=FALSE}
+media_agency_df %>% select(text) %>% filter(str_detect(text, "zuma | court") == TRUE)
 ```
 
 ### Minister News
-```{r Minister News}
-ggplot(media_top_terms %>% filter(topic == "Minister News"), aes(beta, term, fill = factor(topic))) +
-  geom_col(show.legend = FALSE) +
-  labs(
-    title = "Minister News"
-  ) +
-  scale_y_reordered()
+These tweets include ("minister"):
+```{r Minister News, echo=FALSE, warning=FALSE}
+media_agency_df %>% select(text) %>% filter(str_detect(text, "minister") == TRUE)
 ```
 
 ### Nations Address
-```{r Nations Address}
-ggplot(media_top_terms %>% filter(topic == "Nations Address"), aes(beta, term, fill = factor(topic))) +
-  geom_col(show.legend = FALSE) +
-  labs(
-    title = "Nations Address"
-  ) +
-  scale_y_reordered()
+These tweets include (beta > 0.0075):
+```{r Nations Address, echo=FALSE, warning=FALSE}
+media_agency_df %>% select(text) %>% filter(str_detect(text, "watch | president & ramaphosa | speaks") == TRUE)
 ```
 
 
 
 #Additional Requirements
-```{r}
+```{r warning=FALSE}
 library(RedditExtractoR)
 RedditExtractoR::reddit_urls(search_terms = "Covid", subreddit = "southafrica")
 
 comments<- get_reddit(search_terms = "Covid-19", subreddit = "southafrica", page_threshold = 10,
                       sort_by = "comments" )
 ```
+

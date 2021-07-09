@@ -845,7 +845,7 @@ Our main topic influence is COVID-19 as this is what currently affects the count
 tidy_matrix <-
   tidy_reddit_df %>% count(author, word) %>% cast_dfm(author, word, n)
 
-rcomments_lda <- LDA(tidy_matrix, k = 5, control = list(seed = 1234))
+rcomments_lda <- LDA(tidy_matrix, k = 18, control = list(seed = 1234))
 
 rcomments_topics <- tidy(rcomments_lda, matrix = "beta")
 
@@ -854,22 +854,22 @@ rcomments_top_terms <- rcomments_topics %>%
   slice_max(beta, n = 10) %>%
   ungroup() %>%
   arrange(topic,-beta)
-
+rcomments_top_terms
 rcomments_top_terms %>%
   mutate(term = reorder_within(term, beta, topic)) %>%
-  pivot_wider(id_cols = term,
-              names_from = topic,
-              values_from = beta) %>%
-  rename(
-    "Legal News" = 2,
-    "Gauteng & lockdown" = 3,
-    "Nations Address" = 4,
-    "Covid & Business World News" = 5,
-    "Vaccines" = 6
-  ) %>%
-  pivot_longer(cols = c(2, 3, 4, 5, 6),
-               names_to = "topic",
-               values_to = "beta") %>%
+  # pivot_wider(id_cols = term,
+  #             names_from = topic,
+  #             values_from = beta) %>%
+  # rename(
+  #   "Legal News" = 2,
+  #   "Gauteng & lockdown" = 3,
+  #   "Nations Address" = 4,
+  #   "Covid & Business World News" = 5,
+  #   "Vaccines" = 6
+  # ) %>%
+  # pivot_longer(cols = c(2, 3, 4, 5, 6),
+  #              names_to = "topic",
+  #              values_to = "beta") %>%
   drop_na() %>%
   ggplot(aes(beta, term, fill = factor(topic))) +
   geom_col(show.legend = FALSE) +
