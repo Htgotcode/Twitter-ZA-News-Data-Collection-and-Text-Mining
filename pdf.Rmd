@@ -1,9 +1,0 @@
----
-title: "Assignment 2: Data Collection and Text Mining"
-output: bookdown::pdf_book
----
-
-```{r}
-library(bookdown)
-```
-

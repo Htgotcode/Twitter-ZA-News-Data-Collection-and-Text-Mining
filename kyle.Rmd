@@ -191,7 +191,7 @@ bigram_tf_idf %>%
 
 We give more weight to words that appear more often with the incorrect sentiment. The graph below (Figure 3.3) shows that 'no good' or 'not impressed' have the highest weight of being mislabeled as positive, and vice-versa for negative words like guilty. We remove these words to increase the accuracy of our sentiment analysis. We can now tidy our dataset based on tidyverse's stopwords collection, and our own negation word collection.
 
-```{r negation words, echo=FALSE, message=FALSE, warning=FALSE, fig.height=9}
+```{r negation words, echo=FALSE, message=FALSE, warning=FALSE, fig.height=8}
 #vader lexicon imported from VADER GitHub
 vader_lexicon <- read_csv2("data_in/vader_lexicon.csv") %>%
   rename("word" = TOKEN, "value" = `MEAN-SENTIMENT-RATING`)
@@ -549,8 +549,6 @@ ggplot(
 The plot below maps the average total interactions by day. From the relevant peaks, we extract the top tweet in that day. 
 
 ```{r Interactions, eval=FALSE, fig.height=12, fig.width=20, warning=FALSE, include=FALSE}
-# media_vader_df %>% select(favorite_count, retweet_count) %>% mutate(favorite_count + retweet_count)
-
 media_vader_df <- media_vader_df %>%
   mutate(created_at = as.Date(created_at)) %>%
   group_by(created_at) %>%
@@ -688,6 +686,7 @@ pp <- readPNG("images/gap_k_plot.png")
 plot.new() 
 rasterImage(pp,0,0,1,1)
 ```
+\newpage
 
 ## 6.2. Topics found
 
@@ -770,7 +769,7 @@ ggplot(media_topics_gamma, aes(gamma, fill = as.factor(document))) +
 
 We choose Reddit as our other data source. Facebook was considered but API needing proof of identity with an ID document seemed excessive. The 'ReddicommentractoR' package is used to extract comment and post data. Search term 'Covid-19' is used. Other terms were not used as their post dates went further than 6 months. We most of the same analysis for Reddit data.
 
-```{r Fetch post and comments, eval=FALSE, include=FALSE}
+```{r Fetch post and comments, eval=FALSE, message=FALSE, include=FALSE}
 reddit_comments_df <-
   get_reddit(
     search_terms = "Covid-19",
@@ -786,7 +785,7 @@ write_csv(reddit_comments_df, "data_in/reddit_comments.csv")
 
 ## 7.1. Reddit Comparing Comments From r/southafrica Covid-19 Posts.
 
-We clean the data as we did before. Controversial and foul language is left in to not affect sentiment. The worst langauge is usually moderated within the Reddit communities before it is seen by thg public.
+We clean the data as we did before. Controversial and foul language is left in to not affect sentiment. The worst language is usually moderated within the Reddit communities before it is seen by the public.
 
 ```{r Reddit Clean up, message=FALSE, warning=FALSE, include=FALSE}
 reddit_comments_df <- read_csv("data_in/reddit_comments.csv")
@@ -817,6 +816,7 @@ reddit_comments_df_clean <- reddit_comments_df %>%
     comment = gsub(" $", "", comment),
   )
 ```
+
 
 ```{r Reddit bigrams, fig.height=20, message=FALSE, warning=FALSE, include=FALSE}
 #bigrams
@@ -969,7 +969,7 @@ top_words %>%
 
 A tf-idf is then modeled to determine which words are the most important per media agency. We also model the word importance by week and determine which media agency has the most unique topics of the week. Daily Maverick is dominating the first four weeks as they are the only user with Tweets from that time.
 
-```{r Reddit tf-idf, echo=FALSE, fig.height=20, fig.width=, message=FALSE, warning=FALSE}
+```{r Reddit tf-idf, echo=FALSE, fig.height=20, fig.width=15, message=FALSE, warning=FALSE}
 #tf-idf by user
 tidy_reddit_tf_idf <- tidy_reddit_df %>%
   count(word, title) %>%
@@ -1138,20 +1138,48 @@ head(reddit_vader_df %>% select(comment, compound) %>%
   arrange(desc(compound)),1)
 ```
 
-\newpage
-
 # 9. Reddit Interactions
 
 ### 9.1. Highest Upvoted Comment from each Post
 
-```{r Reddit Interactions Highest, echo=FALSE, fig.height=12, fig.width=20, warning=FALSE}
-reddit_comments_df %>% group_by(title) %>% slice_max(order_by = comment_score) %>% select(title, user, comment, comment_score) %>% filter(comment_score > 10) %>% gt() 
+```{r Reddit Interactions Highest, echo=FALSE, warning=FALSE}
+# reddit_vader_df <- reddit_vader_df[!(reddit_vader_df$comment=="removed" | reddit_vader_df$title=="[deleted]"),]
+# reddit_comments_df %>% 
+#   group_by(title) %>% 
+#   slice_max(order_by = comment_score) %>% 
+#   select(title, user, comment, comment_score) %>% 
+#   mutate(comment = str_replace_all(comment, "", "")) %>% 
+#   mutate(comment = str_replace_all(comment, "=", "")) %>% 
+#   mutate(comment = str_replace_all(comment, "", "")) %>% 
+#   mutate(title = str_replace_all(title, "", "")) %>% 
+#   mutate(comment = str_replace_all(comment, "removed", "")) %>% 
+#   mutate(user = str_replace_all(user, "[deleted]", "")) %>% 
+#   filter(comment_score > 10) %>% 
+#   gt() %>% 
+#   tab_options(table.layout = "auto")
+
+pp <- readPNG("images/reddit_interactions_tbl.png")
+plot.new() 
+rasterImage(pp,0,0,1,1)
 ```
 
 ### 9.2. Controversial Comments
 
-```{r Reddit Interactions Controversial, echo=FALSE, fig.height=12, fig.width=20, warning=FALSE}
-reddit_vader_df %>% group_by(title) %>% select(title, user, text, comment_score, controversiality) %>% filter(controversiality == 1)%>% gt() 
+Usually met with less comment score.
+
+```{r Reddit Interactions Controversial, echo=FALSE, warning=FALSE}
+# reddit_vader_df %>% 
+#   group_by(title) %>% 
+#   select(title, user, comment, comment_score, controversiality) %>%
+#   filter(controversiality == 1) %>%
+#   mutate(comment = str_replace_all(comment, "", "")) %>% 
+#   mutate(comment = str_replace_all(comment, "=", "")) %>% 
+#   mutate(comment = str_replace_all(comment, "removed", "N/A")) %>% 
+#   gt() %>% 
+#   tab_options(table.layout = "auto") 
+pp <- readPNG("images/reddit_controversial_tbl.png")
+plot.new() 
+rasterImage(pp,0,0,1,1)
 ```
   
 # 10. Reddit Topic Modelling
@@ -1160,7 +1188,7 @@ reddit_vader_df %>% group_by(title) %>% select(title, user, text, comment_score,
 
 Our result is 9-14 topics. From this we found 12 topics to be accurate.
 
-```{r Reddit tidy matrix, warning = FALSE, include = FALSE}
+```{r Reddit tidy matrix, message=FALSE, warning=FALSE, include=FALSE}
 tidy_matrix <-
 tidy_reddit_df %>% count(title, word) %>% cast_dfm(title, word, n)
 ```
@@ -1182,6 +1210,8 @@ result <- FindTopicsNumber(
 
 FindTopicsNumber_plot(result)
 ```
+
+\newpage
 
 ## 10.2. Topics found
 
