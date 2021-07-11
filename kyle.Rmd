@@ -1144,18 +1144,16 @@ head(reddit_vader_df %>% select(comment, compound) %>%
 
 ### 9.1. Highest Upvoted Comment from each Post
 
-```{r Reddit Interactions Highest, eval=FALSE, fig.height=12, fig.width=20, warning=FALSE, include=FALSE}
+```{r Reddit Interactions Highest, echo=FALSE, fig.height=12, fig.width=20, warning=FALSE}
 reddit_comments_df %>% group_by(title) %>% slice_max(order_by = comment_score) %>% select(title, user, comment, comment_score) %>% filter(comment_score > 10) %>% gt() 
 ```
 
 ### 9.2. Controversial Comments
 
-```{r Reddit Interactions Controversial, eval=FALSE, fig.height=12, fig.width=20, warning=FALSE, include=FALSE}
+```{r Reddit Interactions Controversial, echo=FALSE, fig.height=12, fig.width=20, warning=FALSE}
 reddit_vader_df %>% group_by(title) %>% select(title, user, text, comment_score, controversiality) %>% filter(controversiality == 1)%>% gt() 
 ```
-
-\newpage
-
+  
 # 10. Reddit Topic Modelling
 
 ## 10.1. Gap k justification
@@ -1168,7 +1166,7 @@ tidy_reddit_df %>% count(title, word) %>% cast_dfm(title, word, n)
 ```
 
 
-```{r Reddit Gap k justify, echo=FALSE, warning=FALSE}
+```{r Reddit Gap k justify, echo=FALSE, message=FALSE, warning=FALSE}
 data("AssociatedPress", package = "topicmodels")
 dtm <- AssociatedPress[1:10, ]
 
