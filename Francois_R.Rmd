@@ -274,7 +274,7 @@ reddit_Covid_data <- reddit_Covid_data %>%
          title  = str_replace_all(title ,"RT @[a-z,A-Z]*: "," "),
          title  = str_replace_all(title ,"#[a-z,A-Z]*"," "),
          title  = str_replace_all(title ,"@[a-z,A-Z]*"," "))
-write_csv(reddit_Covid_data,"data_in/reddit_SA.csv")
+write_csv(reddit_Covid_data,"data_in/reddit_comments.csv")
 
 reddit_Covid_data$date= dmy(reddit_Covid_data$date)
 reddit_Covid_data<- reddit_Covid_data %>% mutate("X1"=row_number())

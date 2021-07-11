@@ -30,7 +30,6 @@ library(magick)
 ```{r Fetching Posts}
 library(RedditExtractoR)
 reddit_posts <- RedditExtractoR::reddit_urls(search_terms = "Covid", subreddit = "southafrica", page_threshold = 10)
-
 write_as_csv(reddit_posts, "data_in/reddit_posts")
 ```
 
