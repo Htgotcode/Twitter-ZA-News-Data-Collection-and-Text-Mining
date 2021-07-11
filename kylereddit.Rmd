@@ -23,7 +23,8 @@ write_csv(reddit_comments_df, "data_in/reddit_comments.csv")
 
 # Comparing Comments From r/southafrica Covid-19 Posts.
 
-We first clean the original Tweets to remove unique News based language. Media agencies often lead their Tweet about an article with the category it belongs to, eg. OPINION, BUSINESS, WATCH.
+We clean the data as we did before. Controversial and foul language is left in to not affect sentiment. The worst langauge is usually moderated within the Reddit communities before it is seen by thg public.
+
 ```{r Reddit Clean up, warning=FALSE, include=FALSE}
 reddit_comments_df <- read_csv("data_in/reddit_comments.csv")
 reddit_comments_df <-
@@ -43,6 +44,7 @@ reddit_comments_df_clean <- reddit_comments_df %>%
   mutate(
     comment = rm_twitter_n_url(comment),
     comment = gsub("&amp", "", comment),
+    comment = gsub("J&amp;J", " ", comment),
     comment = gsub("@\\w+", " ", comment),
     comment = gsub("[[:punct:]]", "", comment),
     comment = gsub("[[:digit:]]", " ", comment),
@@ -53,8 +55,7 @@ reddit_comments_df_clean <- reddit_comments_df %>%
   )
 ```
 
-By modeling bigrams and trigrams for our dataset we get a better understanding of what topic is being discussed with each word. 
-Trigrams were modeled but were not necessary as bigrams provided enough information. We can then also see which sentiments are incorrectly labeled. "not good" gives better concomment of a negative sentiment, rather than it being incorrectly identified as positive good.
+
 ```{r Reddit bigrams, warning=FALSE, include=FALSE}
 #bigrams
 tidy_bigram_df <- reddit_comments_df_clean %>%
@@ -110,7 +111,7 @@ bigram_tf_idf %>%
 #   theme_void()
 ```
 
-We give more weight to words that appear more often with the incorrect sentiment. The graph below shows that 'no good' or 'not impressed' have the highest weight of being mis-labeled as positive, and vice-versa for negative words like guilty. We remove these words to increase the accuracy of our sentiment analysis. We can now tidy our dataset based on tidyverse's stopwords collection, and our own negation word collection.
+
 ```{r Reddit negation words, warning=FALSE, include=FALSE}
 #vader lexicon imported from VADER GitHub
 vader_lexicon <- read_csv2("data_in/vader_lexicon.csv") %>%
@@ -156,16 +157,17 @@ negated_words %>%
   geom_col(show.legend = FALSE) +
   facet_wrap( ~ word1, scales = "free_y") +
   labs(x = "Sentiment value * # number of occurrences",
-       y = "Words preceded by negation terms") +
+       y = "Words preceded by negation terms",
+       title = "Negation Words") +
   theme_bw() 
 
 ```
 
-We tokenize the Tweets and remove stop words in tidycomment, our own stopword dictionary, and negation word dictionary. We also use the "twitter" token to handle any left over @'s and URLS.
+
 ```{r Reddit Tidy, warning=FALSE, include=FALSE}
 #tidy df and unnest
 tidy_reddit_df <- reddit_comments_df_clean %>%
-  unnest_tokens(word, comment, token = "tweets") %>%
+  unnest_tokens(word, comment, token = "words") %>%
   filter(
     !word %in% stop_words$word,
     !word %in% negated_words$word2, 
@@ -176,7 +178,7 @@ tidy_reddit_df <- reddit_comments_df_clean %>%
 
 ```
 
-From our tidied Tweet dataset, we look for the top words that appear. This will give us a good idea of what topics are being discussed the most. We find that COVID-19 has been the main topic of discussion. President appears second as President Ramaphosa of South Africa usually addresses the nation regarding COVID-19 information. Additionally, Zuma also appears as he is mentioned as "former president Zuma" in most articles. Zuma appears more as his recent court avoidance and sentencing is being Tweeted. General words surrounding the COVID-19 topic as it is still the main pressure on the country, especially involving Gauteng's rise in infections. 
+From our tidied Reddit dataset, we look for the top words that appear. This will give us a good idea of what topics are being discussed the most. We find that with COVID-19 comments being pulled, the comments discuss people's general interaction witht he virus. The comments come from regular people and this shows what topics are discussed among people.
 
 ```{r Reddit top words, echo=FALSE, warning=FALSE}
 #top words
@@ -198,14 +200,15 @@ top_words %>%
   ) +
   ylab("Frequency") +
   xlab ("") +
-  ggtitle("Most frequent media agency tweets") +
+  ggtitle("Most Frequent Reddit Comment Words") +
   guides(fill = FALSE)
 ```
+
 A tf-idf is then modelled to determine which words are the most important per media agency. We also model the word importance by week and determine which media agency has the most unique topics of the week. Daily Maverick is domanting the first four weeks as they are the only user with Tweets from that time.
 
 ```{r Reddit tf-idf, echo=FALSE, warning=FALSE, fig.height = 15, fig.width = 15}
 #tf-idf by user
-tidy_media_tf_idf <- tidy_reddit_df %>%
+tidy_reddit_tf_idf <- tidy_reddit_df %>%
   count(word, title) %>%
   bind_tf_idf(word, title, n) %>% 
     group_by(title) %>%
@@ -213,7 +216,7 @@ tidy_media_tf_idf <- tidy_reddit_df %>%
   ungroup() %>% 
   mutate(word = reorder(word, tf_idf)) 
 
-tidy_media_tf_idf %>%
+tidy_reddit_tf_idf %>%
   group_by(title) %>%
   slice_max(tf_idf, n = 5) %>%
   ungroup() %>%
@@ -223,21 +226,21 @@ tidy_media_tf_idf %>%
   labs(x = "tf-idf", y = NULL) +
   theme_bw() +
   labs(
-    title = "Highest tf-idf from each Media Agency"
+    title = "Highest tf-idf from Title"
   )
 ```
 
 
 ```{r Reddit tf-idf week, echo=FALSE, warning=FALSE, fig.height = 8, fig.width = 13}
 #tf-idf week
-tidy_media_tf_idf_date <- tidy_reddit_df %>%
+tidy_reddit_tf_idf_date <- tidy_reddit_df %>%
   select(post_date, title, word) %>%
   mutate(post_date = as.Date(post_date)) %>% 
   group_by(post_date, title) %>%
   count(word, post_date) %>%
   bind_tf_idf(word, post_date, n)
 
-tidy_media_tf_idf_date %>%
+tidy_reddit_tf_idf_date %>%
   mutate(week = week(as.Date(post_date))) %>% 
   group_by(week) %>%
   slice_max(tf_idf, n = 7) %>%
@@ -249,7 +252,7 @@ tidy_media_tf_idf_date %>%
   theme_bw() +
   scale_fill_discrete(name = "Screen Name") +
   labs(
-    title = "Highest tf-idf by Media Agency in Each Week"
+    title = "Highest tf-idf by Title in Each Week"
   )
 ```
 
@@ -384,38 +387,23 @@ head(reddit_vader_df %>% select(comment, compound) %>%
 
 ### Highest upvoted comment from each post (Upvotes > 10 to remove noise)
 
-```{r Reddit Interactions, echo=FALSE, warning=FALSE, fig.height=12, fig.width=20}
+```{r Reddit Interactions Highest, echo=FALSE, fig.height=12, fig.width=20, warning=FALSE}
 reddit_comments_df %>% group_by(title) %>% slice_max(order_by = comment_score) %>% select(title, user, comment, comment_score) %>% filter(comment_score > 10)
 ```
 
 ### Controversial Comments
-```{r Reddit Interactions, echo=FALSE, warning=FALSE, fig.height=12, fig.width=20}
-reddit_vader_df %>% group_by(title) %>% slice_max(order_by = comment_score) %>% select(title, user, text, comment_score)
+
+```{r Reddit Interactions Controversial, echo=FALSE, warning=FALSE, fig.height=12, fig.width=20}
+reddit_vader_df %>% group_by(title) %>% select(title, user, text, comment_score, controversiality) %>% filter(controversiality == 1)
 ```
-### Peak Tweets by User   
-
-*@eNCA*: Call for ministers over 60 to resign.
-
-*@dailymaverick*: SCORPIO Floyd Shivambu’s brother quietly pays back R4.55m, admits he received the VBS money gratuitously.
-
-*@TimesLIVE*:	Do you approve of Duduzane running for president?
-
-*@News24*: Coca-Cola lost $4 billion in market value after Cristiano Ronaldo suggested people drink water instead.
-
-*@SABCNews*: BREAKING NEWS: King of Eswatini has fled amid public violence in the country.
 
 \newpage
 
 # Topic Modelling
 
-A topic model is a type of statistic model for discovering the abstract "topics" that occur in a collection of documents.
-We determine the best range k-value for LDA (Latent Dirichlet Allocation). The importance of the value of 'k' is to ensure you do not over estimate or underestimate the data. If you over estimate it, you will be left with topics that carry very little meaning and if you under estimate the data, you will lose out on topics that could have been useful to your research.
-
-By looking at the lowest minimum and the highest maximum, we can determine the 'k'. This is how we have interpreted the graphs produced. Griffiths2004 is not informative in this situation and is therefore ignored.
-
-This method used has been proved to produce the best results of LDA without subjectively tuning the 'k' value. Our result is 12 topics.
-
 ## Gap k justification
+
+Our result is 9-14 topics. From this we found 12 topics to be accurate.
 
 ```{r Reddit tidy matrix, warning = FALSE, include = FALSE}
 tidy_matrix <-
@@ -440,13 +428,6 @@ result <- FindTopicsNumber(
 FindTopicsNumber_plot(result)
 ```
 
-
-```{r Reddit Gap k justify image, echo=FALSE, warning=FALSE}
-pp <- readPNG("images/gap_k_plot.png")
-plot.new() 
-rasterImage(pp,0,0,1,1)
-```
-
 ## Topics found
 
 ### Beta
@@ -454,35 +435,35 @@ rasterImage(pp,0,0,1,1)
 Our main topic influence is COVID-19, as this is what currently affects the country the most. Our words are mapped to a beta which shows the amount the word appears per topic. 
 
 ```{r Reddit Topic Modelling Beta, echo=FALSE, warning=FALSE, fig.height=12, fig.width=15}
-media_lda <- LDA(tidy_matrix, k = 12, control = list(seed = 1234))
+reddit_lda <- LDA(tidy_matrix, k = 12, control = list(seed = 1234))
 
 
-media_topics_beta <- tidy(media_lda, matrix = "beta")
+reddit_topics_beta <- tidy(reddit_lda, matrix = "beta")
 
-media_top_terms <- media_topics_beta %>%
+reddit_top_terms <- reddit_topics_beta %>%
   group_by(topic) %>%
-  slice_max(beta, n = 10) %>%
+  slice_max(beta, n = 5) %>%
   ungroup() %>%
   arrange(topic, -beta)
 
-media_top_terms <- media_top_terms %>%
+reddit_top_terms <- reddit_top_terms %>%
   mutate(term = reorder_within(term, beta, topic)) %>% 
   pivot_wider(id_cols = term,
               names_from = topic,
               values_from = beta) %>%
     rename(
-      "News24 - Level 4 Lockdown" = 2,
-      "eNCA - Watch President Ramaphosa Speak" = 3,
-      "Time Live - The Publics News" = 4,
-      "eNCA - Health Covid News" = 5,
-      "News24 - Cape Town, Northern & Eastern Cape, Police Updates" = 6,
-      "Daily Maverick - South African Covid Vaccine" = 7,
-      "News24 - Gauteng Covid Increase News" = 8,
-      "SABC News - Former President Zuma in Court" = 9,
-      "SABC News - President Rhamaphosa" = 10,
-      "Daily Maverick - World Covid News" = 11,
-      "Times Live - National Covid News" = 12,
-      "Times Live - Sunday President Speach on Lockdown" = 13
+      "Russian Vaccine Data" = 2,
+      "Religious People on Vaccination" = 3,
+      "Lockdown Discussions" = 4,
+      "Covid Deaths" = 5,
+      "Time Based Discussion in Lockdown" = 6,
+      "Vaccine Discussions" = 7,
+      "Sale of Alcohol and the Truama it Causes" = 8,
+      "Zuma's Prison Time " = 9,
+      "Gauteng in Need of More Hospital Equipment" = 10,
+      "People's Interaction with Covid Laws" = 11,
+      "People Wearing Masks" = 12,
+      "Covid Reported Death Data" = 13
     ) %>%
     pivot_longer(
       cols = c(-1),
@@ -491,32 +472,9 @@ media_top_terms <- media_top_terms %>%
     ) %>%
     drop_na()
 
-ggplot(media_top_terms, aes(beta, term, fill = factor(topic))) +
+ggplot(reddit_top_terms, aes(beta, term, fill = factor(topic))) +
   geom_col(show.legend = FALSE) +
   facet_wrap( ~ topic, scales = "free_y", ncol = 2) +
   scale_y_reordered() +
   labs(title = "Modeled Topics (All Tweets)")
-```
-
-### Gamma
-
-The gamma is added to the topics modeled. We can now see which agencies are strongly associated with each topic. The higher the gamma, the more strongly the specific agency associates with the topic.
-
-```{r Reddit Topic Modelling Gamma, echo=FALSE, warning=FALSE, fig.width=10, fig.height=7}
-media_topics_gamma <-
-  tidy(media_lda,
-       matrix = "gamma" ,
-       document_names = rownames(title))
-
-ggplot(media_topics_gamma, aes(gamma, fill = as.factor(document))) +
-  geom_histogram(alpha = 0.8) +
-  facet_wrap( ~ topic, ncol = 3) +
-  labs(
-    title = "Distribution of document probabilities for each topic",
-    subtitle = "Each topic is associated with 1-5 Media Agencies",
-    y = "Number of topics",
-    x = expression(gamma)
-  ) +
-  theme_bw() +
-  scale_fill_discrete(name = "Screen Names")
 ```
