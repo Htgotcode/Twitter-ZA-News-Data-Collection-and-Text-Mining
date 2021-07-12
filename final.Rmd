@@ -6,6 +6,13 @@ output:
     latex_engine: xelatex
     toc: true
 ---
+
+\newpage
+
+# GitHub
+
+[GitHub Repository Link](https://github.com/Htgotcode/Twitter-ZA-News-Data-Collection-and-Text-Mining)
+
 # 1. Background
 
 South Africa has seen an increase in COVID-19 recently and that has been labelled the third wave. The statistic of a third wave has moved the country into another level 4 lockdown. The news on statistics and general COVID-19 related happenings in South Africa are usually reported by their media agencies. The media agencies use many platforms online to repost their articles such as websites and mobile apps. Twitter is a platform where they can post their headline with a link to the article. Using sentiment analysis and topic modelling, we will compare how sentiment and topics have changed over time and how they compare to other media agencies.
@@ -13,9 +20,9 @@ South Africa has seen an increase in COVID-19 recently and that has been labelle
 # 2. Analysis Process
 
 Twitter posts will be extracted using the “rtweet” package for the programming language “R”. By using the get_timeline method in the package we can extract the latest 3200 Tweets from a specific user without premium. In this case, the users will be a selection of top South African media agencies. 3200 Tweets will give us 2 months’ worth of data per media agency. Relevant COVID-19 Tweets will be extracted from that data. We use VADER to conduct sentiment analysis on the Tweets extracted. We choose VADER over sentimentR, as VADER has been academically proven to provide a more accurate sentiment on Tweets. VADER will give us a positive, negative, neutral, and compound metric on the Tweet. Compound is the Tweets overall sentiment. We then conducted topic modeling using LDA. 
-Most of our process comes from working through [Text Mining with R](https://www.tidytextmining.com/)
+Most of our process comes from working through [Text Mining with R](https://www.tidytextmining.com/).
 
-## 2.1. Reasons for Media Agencies Choosen
+## 2.1. Media Agency Reasoning
 
 After research on what makes a news source trustworth and unbias, we chose a mix of them. 
 
@@ -32,6 +39,7 @@ After research on what makes a news source trustworth and unbias, we chose a mix
 \newpage
 
 ```{r SETUP, warning=FALSE, include=FALSE}
+#AVAILABLE ON GITHUB
 library(rtweet)
 library(ggplot2)
 library(tidyr)
@@ -77,6 +85,7 @@ write_as_csv(media_agency_df, "data_in/media_agency_tweets")
 # 3. Giving Context to our Data and Tidying.
 
 We first clean the original Tweets to remove unique News based language. Media agencies often lead their Tweet about an article with the category it belongs to, eg. OPINION, BUSINESS, WATCH.
+
 ```{r Clean up, warning=FALSE, include=FALSE}
 # created if more Tweets could be accessed to be more covid topic specific.
 # covid_dictionary <- c("herd", "immunity", "incubation", "job", "loss", "Kits", "lockdown", "mask", "N95", "outbreak", "pandemic", "quarantine", "recovery", "sanitiser", "transmission", "Underlying", "conditions", "Ventilators", "WHO", "xenophobia", "youTube", "zoonotic", "stay-at-home", "covid", "coronavirus", "hyrdoxychloroquine", "asymptomatic", "frontline", "virus", "self-isolation", "disinfectant", "shelter-in-place", "masks", "SARS-CoV-2", "ICU", "corona", "reopen", "distancing", "covering", "furlough", "tracer", "easing", "remdesivir", "mail-in", "hornet", "antibody", "in-person", "defund", "racism", "looting", "loot", "reopen", "two-metre", "pandemic", "looter", "distancing", "dexamethasone", "racial", "vaccine", "curfew","johnssons", "astrazeneca", "hospitals", "social-distance", "social-distancing", "police", "regulations", "symptoms", "testing", "positive-tests", "negative-tests" , "confirmed-cases", "restrictions", "deaths", "infected", "recoveries", "level", "jobs", "unemployed", "doctors", "infections", "sanitise", "sanitiser", "sanitisation", "containment")
@@ -132,9 +141,13 @@ ggplot(media_agency_df, aes(x = created_at, fill = screen_name)) +
   theme(plot.caption = element_text(hjust=0.5, size=rel(1.2)))
 ```
 
+\pagebreak
+
+## 3.1. Bigrams
+  
 Next, by modeling bigrams and trigrams for our dataset, we get a better understanding of what topic is being discussed with each word, as shown in figure 3.2. Trigrams were modeled but were not necessary as bigrams provided enough information. We can then also see which sentiments are incorrectly labeled. "not good" gives better context of a negative sentiment, rather than it being incorrectly identified as positive good, as shown in figure 3.3.
 
-```{r bigrams, echo=FALSE, warning=FALSE, fig.height=10}
+```{r bigrams, echo=FALSE, warning=FALSE, fig.height=7.5}
 #bigrams
 tidy_bigram_df <- media_agency_df_clean %>%
   unnest_tokens(bigram, text, token = "ngrams", n = 2) %>%
@@ -190,9 +203,11 @@ bigram_tf_idf %>%
   theme(plot.caption = element_text(hjust=0.5, size=rel(1.2)))
 ```
 
+## 3.2. Negation Words
+
 We give more weight to words that appear more often with the incorrect sentiment. The graph below (Figure 3.3) shows that 'no good' or 'not impressed' have the highest weight of being mislabeled as positive, and vice-versa for negative words like guilty. We remove these words to increase the accuracy of our sentiment analysis. We can now tidy our dataset based on tidyverse's stopwords collection, and our own negation word collection.
 
-```{r negation words, echo=FALSE, message=FALSE, warning=FALSE, fig.height=8}
+```{r negation words, echo=FALSE, message=FALSE, warning=FALSE, fig.height=7.5}
 #vader lexicon imported from VADER GitHub
 vader_lexicon <- read_csv2("data_in/vader_lexicon.csv") %>%
   rename("word" = TOKEN, "value" = `MEAN-SENTIMENT-RATING`)
@@ -280,8 +295,6 @@ tidy_trigram_df %>%
 
 ```
 
-We tokenize the Tweets and remove stop words in tidytext, our own stopword dictionary, and negation word dictionary. We also use the "twitter" token to handle any left over @'s and URLS.
-
 ```{r Tidy, warning=FALSE, include=FALSE}
 #tidy df and unnest
 tidy_media_df <- media_agency_df_clean %>%
@@ -295,6 +308,8 @@ tidy_media_df <- media_agency_df_clean %>%
   mutate(created_at = as.Date(created_at))
 
 ```
+
+## 3.3. Top Words
 
 From our tidied Tweet dataset, we look for the top words that appear (Figure 3.4). It gives us a good idea of what topics are being discussed the most. We find that COVID-19 has been the main topic of discussion. President appears second as President Ramaphosa of South Africa usually addresses the nation regarding COVID-19 information. Additionally, Zuma also appears as he is mentioned as "former president Zuma" in most articles. Zuma appears more as his recent court avoidance and sentencing is being Tweeted. General words surrounding the COVID-19 topic as it is still the main pressure on the country, especially involving Gauteng's rise in infections. 
 
@@ -321,9 +336,76 @@ top_words %>%
   guides(fill = FALSE)
 ```
 
-A tf-idf is then modeled to determine which words are the most important per media agency (Figure 3.5). We also model the word importance by week and determine which media agency has the most unique topics of the week. Daily Maverick is dominating the first four weeks as they are the only user with Tweets from that time.
+\pagebreak
 
-```{r tf-idf, echo=FALSE, warning=FALSE, fig.height = 10, fig.width = 10}
+## 3.4. Analyzing Words and User Frequency
+
+## 3.4.1. Term Frequency Distribution
+
+What we see from figure 3.6 is each media agency's use of uncommon words. The more right-skewed the data is, the less unique the news articles are. Times Live is shown to have the most diversity.
+
+```{r Unique words, echo=FALSE, message=FALSE, warning=FALSE}
+tweet_words <- media_agency_df_clean %>%
+  unnest_tokens(word, text) %>%
+  count(screen_name, word, sort = TRUE)
+
+total_words <- tweet_words %>% 
+  group_by(screen_name) %>% 
+  summarize(total = sum(n))
+
+tweet_words <- left_join(tweet_words, total_words)
+
+ggplot(tweet_words, aes(n/total, fill = screen_name)) +
+  geom_histogram(show.legend = FALSE) +
+  xlim(NA, 0.0009) +
+  facet_wrap(~screen_name, ncol = 2, scales = "free_y") +
+  labs(x = "Word Count", y = "Term Frequency (n/total)", caption = "Figure 3.5: Distribution of Term Frequency") +
+  theme_bw() +
+  theme(plot.caption = element_text(hjust=0.5, size=rel(1.2)))
+```
+
+\pagebreak
+
+## 3.4.2. Zipf's Law
+
+Our interpretation of Zipf's Law (Figure 3.6) on our dataset shows that the media agencies tend to use the same words often. News on different categories in the world will generally be of the same topic, but with different subjects. Eg. "Business News today for Amazon is x" vs. "Business News today for Microsoft is x". 
+
+```{r Zipfs law, echo=FALSE, message=FALSE, warning=FALSE}
+freq_by_rank <- tweet_words %>% 
+  group_by(screen_name) %>% 
+  mutate(rank = row_number(), 
+         `term frequency` = n/total) %>%
+  ungroup()
+
+# rank_subset <- freq_by_rank %>% 
+#   filter(rank < 500,
+#          rank > 10)
+# lm(log10(`term frequency`) ~   log10(rank), data = rank_subset)
+
+# Call:
+# lm(formula = log10(`term frequency`) ~ log10(rank), data = rank_subset)
+# 
+# Coefficients:
+# (Intercept)  log10(rank)  
+#     -1.2136      -0.8917  
+
+freq_by_rank %>% 
+  ggplot(aes(rank, `term frequency`, color = screen_name)) + 
+  geom_abline(intercept = -1.2136, slope = -0.8917, 
+              color = "gray50", linetype = 2) +
+  geom_line(size = 1.1, alpha = 0.8, show.legend = FALSE) + 
+  scale_x_log10() +
+  scale_y_log10() +
+  labs(x = "Rank", y = "Term Frequency", caption = "Figure 3.6: Zipf's Law with a Broken Power Law") +
+  theme_bw() +
+  theme(plot.caption = element_text(hjust=0.5, size=rel(1.2)))
+```
+  
+## 3.5. TF-IDF
+
+A tf-idf is then modeled to determine which words are the most important per media agency (Figure 3.7). We also model the word importance by week and determine which media agency has the most unique topics of the week. Daily Maverick is dominating the first four weeks as they are the only user with Tweets from that time.
+
+```{r tf-idf, echo=FALSE, fig.height=7.5, message=FALSE, warning=FALSE}
 #tf-idf by user
 tidy_media_tf_idf <- tidy_media_df %>%
   count(word, screen_name) %>%
@@ -340,12 +422,12 @@ tidy_media_tf_idf %>%
   ggplot(aes(tf_idf, fct_reorder(word, tf_idf), fill = screen_name)) +
   geom_col(show.legend = FALSE) +
   facet_wrap(~ screen_name, ncol = 2, scales = "free_y") +
-  labs(x = "tf-idf", y = NULL, caption = "Figure 3.5: Highest tf-idf from each Media Agency") +
+  labs(x = "tf-idf", y = NULL, caption = "Figure 3.7: Highest tf-idf from each Media Agency") +
   theme_bw() +
   theme(plot.caption = element_text(hjust=0.5, size=rel(1.2)))
 ```
 
-Tweet topics involved with the tf-idf's listed in the weeks collected (Figure 3.6):
+Tweet topics involved with the tf-idf's listed in the weeks collected (Figure 3.8):
 
 - 18. Nazanin's struggles to breathe while Narenda mMdi's government abdicates all responsibility.
 - 19. Newspaper is on sale now in and free to loyalty card holders so go grab a copy henni has movies for everyone so maybe ill see you there. extinction rebellion stop putting activists on trial it isn’t in the public interest.
@@ -375,14 +457,17 @@ tidy_media_tf_idf_date %>%
   ggplot(aes(tf_idf, fct_reorder(word, tf_idf), fill = screen_name)) +
   geom_col(show.legend = TRUE) + 
   facet_wrap(~ week, ncol = 2, scales = "free") +
-  labs(x = "tf-idf", y = NULL, caption = "Figure 3.6: Highest tf-idf by Media Agency in Each Week") +
+  labs(x = "tf-idf", y = NULL, caption = "Figure 3.8: Highest tf-idf by Media Agency in Each Week") +
   theme_bw() +
   theme(plot.caption = element_text(hjust=0.5, size=rel(1.2))) +
   scale_fill_discrete(name = "Screen Name") 
 
 ```
 
-The figure (3.7) below shows which words are most likely to co-occur. We use this to understand the context of words in our topic modeling. The words shown are popular words in our dataset. 
+## 3.6. Word Correlation Among Users
+
+
+The figure (3.9) below shows which words are most likely to co-occur. We use this to understand the context of words in our topic modeling. The words shown are popular words in our dataset. 
 
 ```{r Counting and correlating among sections, echo=FALSE, warning=FALSE}
 media_agency_section_words <- tidy_media_df %>%
@@ -413,7 +498,7 @@ word_cors %>%
   geom_bar(stat = "identity") +
   facet_wrap( ~ item1, scales = "free") +
   coord_flip() +
-  labs(x = "Correlation Strength", y = "Preceding Word", caption = "Figure 3.7: Words that Precede Popular Terms") +
+  labs(x = "Correlation Strength", y = "Preceding Word", caption = "Figure 3.9: Words that Precede Popular Terms") +
   theme_bw() +
   theme(plot.caption = element_text(hjust=0.5, size=rel(1.2))) +
   theme(legend.justification = c(-10,-10))
@@ -438,7 +523,6 @@ word_cors %>%
 vader_df <- vader_df(media_agency_df_clean$text)
 write_as_csv(vader_df, "data_in/vader_tweets")
 ```
-
 
 ```{r VADER setup, warning=FALSE, include=FALSE}
 vader_df <- read_csv("data_in/vader_tweets.csv")
@@ -507,7 +591,7 @@ head(media_vader_df %>% select(text.y, compound) %>%
 ## 4.2. Sentiment Over Time per Agency
 
 Daily Maverick, although decreasing, has the straightest regression line. It also has the least outlying total sentiment. We could conclude that this agency is the least bias to emotion. 
-News24 has the most positive and positive daily news. 
+News24 has the most positive and negative daily news. 
 
 ```{r VADER per agency, echo=FALSE, fig.height=10, fig.width=15, message=FALSE, warning=TRUE}
 #Sentiment over time per agency
@@ -742,6 +826,8 @@ ggplot(media_top_terms, aes(beta, term, fill = factor(topic))) +
   theme(plot.caption = element_text(hjust=0.5, size=rel(1.2))) 
 ```
 
+\pagebreak
+
 ### 6.2.2. Gamma
 
 The gamma is added to the topics modeled. We can now see which agencies are strongly associated with each topic. The higher the gamma, the more strongly the specific agency associates with the topic.
@@ -768,7 +854,7 @@ ggplot(media_topics_gamma, aes(gamma, fill = as.factor(document))) +
 
 # 7. Additional Requirements
 
-We choose Reddit as our other data source. Facebook was considered but API needing proof of identity with an ID document seemed excessive. The 'ReddicommentractoR' package is used to extract comment and post data. Search term 'Covid-19' is used. Other terms were not used as their post dates went further than 6 months. We most of the same analysis for Reddit data.
+We choose Reddit as our other data source. Facebook was considered but API needing proof of identity with an ID document seemed excessive. The 'ReddicommentractoR' package is used to extract comment and post data. Search term 'Covid-19' is used. Other terms were not used as their post dates went further than 6 months. We follow most of the same analysis for Reddit data as Twitter.
 
 ```{r Fetch post and comments, eval=FALSE, message=FALSE, include=FALSE}
 reddit_comments_df <-
@@ -968,7 +1054,61 @@ top_words %>%
   guides(fill = FALSE)
 ```
 
-A tf-idf is then modeled to determine which words are the most important per media agency. We also model the word importance by week and determine which media agency has the most unique topics of the week. Daily Maverick is dominating the first four weeks as they are the only user with Tweets from that time.
+```{r Reddit Unique words, message=FALSE, warning=FALSE, include=FALSE}
+comment_words <- reddit_comments_df_clean %>%
+  unnest_tokens(word, comment) %>%
+  count(title, word, sort = TRUE)
+
+total_words <- comment_words %>% 
+  group_by(title) %>% 
+  summarize(total = sum(n))
+
+comment_words <- left_join(comment_words, total_words)
+
+ggplot(comment_words, aes(n/total, fill = title)) +
+  geom_histogram(show.legend = FALSE) +
+  xlim(NA, 0.0009) +
+  facet_wrap(~title, ncol = 2, scales = "free_y") +
+  labs(x = "Word Count", y = "Term Frequency (n/total)", caption = "Figure 3.5: Distribution of Term Frequency") +
+  theme_bw() +
+  theme(plot.caption = element_text(hjust=0.5, size=rel(1.2)))
+```
+
+\pagebreak
+
+Our interpretation of Zipf's Law (Figure 7.3) on Reddit comments show that commenters use a lot of text slang, as they do not follow the broken power law of regular language. 
+
+```{r Reddit Zipfs law, echo=FALSE, message=FALSE, warning=FALSE}
+freq_by_rank <- comment_words %>% 
+  group_by(title) %>% 
+  mutate(rank = row_number(), 
+         `term frequency` = n/total) %>%
+  ungroup()
+
+# rank_subset <- freq_by_rank %>%
+#   filter(rank < 500,
+#          rank > 10)
+# lm(log10(`term frequency`) ~   log10(rank), data = rank_subset)
+#
+# Call:
+# lm(formula = log10(`term frequency`) ~ log10(rank), data = rank_subset)
+# 
+# Coefficients:
+# (Intercept)  log10(rank)  
+#     -0.7917      -0.8907  
+
+
+freq_by_rank %>% 
+  ggplot(aes(rank, `term frequency`, color = title)) + 
+  geom_abline(intercept = -0.7917, slope = -0.8907, 
+              color = "gray50", linetype = 2) +
+  geom_line(size = 1.1, alpha = 0.8, show.legend = FALSE) + 
+  scale_x_log10() +
+  scale_y_log10() +
+  labs(x = "Rank", y = "Term Frequency", caption = "Figure 7.3: Reddit Zipf's Law with a Broken Power Law") +
+  theme_bw() +
+  theme(plot.caption = element_text(hjust=0.5, size=rel(1.2)))
+```
 
 ```{r Reddit tf-idf, echo=FALSE, fig.height=20, fig.width=15, message=FALSE, warning=FALSE}
 #tf-idf by user
@@ -1016,19 +1156,19 @@ tidy_reddit_tf_idf_date %>%
   theme(plot.caption = element_text(hjust=0.5, size=rel(1.2))) 
 ```
 
-The graph below shows which words are most likely to co-occur. We use this to understand the concomment of words in our topic modeling. The words shown are popular words in our dataset. 
+The graph below shows which words are most likely to co-occur, or not. We use this to understand the context of words in our topic modeling. The words shown are popular words in our dataset. 
 
 ```{r Reddit Counting and correlating among sections, echo=FALSE, fig.width=12, message=FALSE, warning=FALSE}
-media_agency_section_words <- tidy_reddit_df %>%
+reddit_section_words <- tidy_reddit_df %>%
   mutate(section = row_number() %/% 10) %>%
   filter(section > 0)
 
 # count words co-occuring within sections
-word_pairs <- media_agency_section_words %>%
+word_pairs <- reddit_section_words %>%
   pairwise_count(word, section, sort = TRUE)
 
 # we need to filter for at least relatively common words first
-word_cors <- media_agency_section_words %>%
+word_cors <- reddit_section_words %>%
   group_by(word) %>%
   filter(n() >= 20) %>%
   pairwise_cor(word, section, sort = TRUE)
@@ -1067,6 +1207,8 @@ word_cors %>%
 #   theme_void()
 ```
 
+\pagebreak
+
 # 8. Reddit Sentiment Analysis
 
 ```{r Reddit VADER write, eval=FALSE, warning=FALSE, include=FALSE}
@@ -1102,7 +1244,7 @@ ggplot(
   theme_bw() +
   scale_y_continuous(expand = c(0, 0)) +
   scale_x_date(date_breaks = "3 day", date_labels = "%m-%d", expand = c(0, 0)) +
-  labs(x = "Date", y = "Total Sentiment", caption = "Figure 8.1: Sentiment Over Time by Media Agency") +
+  labs(x = "Date", y = "Total Sentiment", caption = "Figure 8.1: Sentiment Over Time by Comments") +
   theme_bw() +
   theme(
     axis.text.x = element_text(
@@ -1164,6 +1306,8 @@ plot.new()
 rasterImage(pp,0,0,1,1)
 ```
 
+\pagebreak
+
 ### 9.2. Controversial Comments
 
 Usually met with less comment score.
@@ -1183,6 +1327,8 @@ plot.new()
 rasterImage(pp,0,0,1,1)
 ```
   
+\pagebreak
+
 # 10. Reddit Topic Modelling
 
 ## 10.1. Gap k justification
