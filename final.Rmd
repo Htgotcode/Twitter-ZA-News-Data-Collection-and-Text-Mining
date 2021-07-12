@@ -60,6 +60,7 @@ library(lda)
 library(stm)
 library(RedditExtractoR)
 library(gt)
+library(tinytex)
 ```
 
 ```{r Fetching Tweets, eval=FALSE, warning=FALSE, include=FALSE}
